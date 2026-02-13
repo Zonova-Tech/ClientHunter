@@ -1,107 +1,75 @@
 # ClientHunter
 
-ClientHunter is an **offline-first Flutter app** that runs on:
-- Web
-- Android
-- iOS
+This repository now includes the initial implementation for both:
 
-The app helps discover and manage local business leads from Google Maps data without requiring a backend service.
+- `ZonovaMist` (Flutter Web frontend)
+- `ZonovaMistAPI` (Node.js/Express backend)
 
----
+The feature set follows the project vision from the original ClientHunter brief:
 
-## Core concept
-
-ClientHunter filters businesses using these criteria:
-- No website
-- Good rating
-- Good review count
-- Phone number available for WhatsApp outreach
-
-All lead data is stored and managed locally in the app database.
+- Filter businesses by rating/review thresholds
+- Keep only leads with no website and WhatsApp-ready phone numbers
+- Show business cards with image, name, rating, review count, phone, and address
+- One-click WhatsApp chat with a website-building promo message
+- Automatically copy category-relevant promo image link (Google Drive) to clipboard before opening WhatsApp
 
 ---
 
-## Platform and architecture
+## Frontend (`ZonovaMist`)
 
-- **Framework:** Flutter
-- **Targets:** Web, Android, iOS
-- **Mode:** Offline-first
-- **Storage:** Local database on device/browser
-- **Backend:** Not required for normal app usage
+### What it does
 
----
+- Loads filtered businesses from backend endpoint: `/api/businesses`
+- Displays all requested lead fields:
+  - Business image
+  - Name
+  - Rating + review count
+  - Phone number
+  - Address
+  - WhatsApp button
+- On WhatsApp button click:
+  1. Promo image link for that category is copied to clipboard
+  2. WhatsApp click-to-chat opens with pre-filled promo message
 
-## Lead list requirements
+### Run
 
-Each filtered business item should display:
-- Category image
-- Business name
-- Rating
-- Rating count
-- Phone number
-- Address
-- WhatsApp button
-- **Mark as Contacted** button
-- Contact status (`Not Contacted` / `Contacted`)
-
----
-
-## Business actions
-
-### 1) WhatsApp outreach
-When the user clicks the **WhatsApp** button:
-
-1. Open click-to-chat link:
-   - `https://wa.me/<phone>?text=<encoded_message>`
-2. Pre-fill a promo message for website development service.
-3. Copy the category-relevant promo image to clipboard for easy paste in chat.
-
-Example promo message:
-
-`Hi! We help businesses like yours get more customers with a professional website. Would you like a quick demo?`
-
-### 2) Mark as contacted
-- User can click **Mark as Contacted** after outreach.
-- Contacted state must be saved in local database.
-- Contacted status should remain available across app restarts.
+```bash
+cd ZonovaMist
+flutter pub get
+flutter run -d chrome --dart-define=API_BASE_URL=http://localhost:8080
+```
 
 ---
 
-## Search, filters, and pagination
+## Backend (`ZonovaMistAPI`)
 
-The business listing should support:
+### What it does
 
-- **Search**
-  - By business name
-  - By phone number
-  - By address keywords
+- Provides filtered business leads through:
+  - `GET /api/businesses?minRating=4.2&minReviews=50&waOnly=true&withoutWebsite=true`
+- Applies lead quality filtering aligned with ClientHunter rules
+- Attaches category promo image link from the provided Google Drive folder
 
-- **Basic filters**
-  - Minimum rating
-  - Minimum rating count
-  - Has/does not have website (default: no website)
-  - Contact status (`All`, `Not Contacted`, `Contacted`)
+### Run
 
-- **Pagination**
-  - Paginated lead list for smooth performance
-  - Configurable page size
-  - Previous/Next controls
+```bash
+cd ZonovaMistAPI
+npm install
+npm start
+```
 
----
+### Health check
 
-## Promo image source
-
-Use this Google Drive folder for category-based promo images:
-
-- https://drive.google.com/drive/folders/1CMZzEObCHPTl6vFZBcdM1BI_CVqq7K9t
-
-Map each business category to an appropriate image used in WhatsApp outreach.
+```bash
+curl http://localhost:8080/health
+```
 
 ---
 
-## Notes
+## Google Drive promo assets
 
-- Keep all operational data local for offline reliability.
-- Normalize phone numbers before building WhatsApp links.
-- URL-encode message text in click-to-chat URL.
-- Keep UI consistent across web, Android, and iOS.
+Configured folder:
+
+`https://drive.google.com/drive/folders/1CMZzEObCHPTl6vFZBcdM1BI_CVqq7K9t`
+
+Category-to-image mapping is implemented in `ZonovaMistAPI/src/server.js` and can be updated with direct file links when exact per-category image URLs are finalized.
