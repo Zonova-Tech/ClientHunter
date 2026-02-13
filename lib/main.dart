@@ -79,13 +79,10 @@ class _LeadHomePageState extends State<LeadHomePage> {
       switch (_status) {
         case ContactStatusFilter.all:
           statusMatch = true;
-          break;
         case ContactStatusFilter.notContacted:
           statusMatch = !lead.isContacted;
-          break;
         case ContactStatusFilter.contacted:
           statusMatch = lead.isContacted;
-          break;
       }
 
       return queryMatch && ratingMatch && ratingCountMatch && websiteMatch && statusMatch;
