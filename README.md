@@ -105,3 +105,58 @@ Map each business category to an appropriate image used in WhatsApp outreach.
 - Normalize phone numbers before building WhatsApp links.
 - URL-encode message text in click-to-chat URL.
 - Keep UI consistent across web, Android, and iOS.
+
+---
+
+## Android setup and build
+
+This repository now includes the Android platform project under `android/`.
+
+### Prerequisites
+- Flutter SDK installed locally
+- Android SDK + platform tools
+- JDK 17+
+
+### Configure local Flutter path
+1. Copy `android/local.properties.example` to `android/local.properties`
+2. Set:
+   - `flutter.sdk=/absolute/path/to/flutter`
+
+### Build APK
+From repo root:
+
+```bash
+flutter pub get
+flutter build apk --release
+```
+
+---
+
+## iOS setup and build
+
+This repository now includes the iOS platform scaffold under `ios/`.
+
+### Prerequisites
+- Flutter SDK installed locally
+- Xcode (latest stable)
+- CocoaPods
+
+### Configure and build
+From repo root:
+
+```bash
+flutter pub get
+flutter build ios --release --no-codesign
+```
+
+For simulator build:
+
+```bash
+flutter build ios --simulator
+```
+
+Open iOS project in Xcode when signing/distribution is needed:
+
+```bash
+open ios/Runner.xcworkspace
+```
