@@ -1,75 +1,96 @@
 # ClientHunter
 
-This repository now includes the initial implementation for both:
+ClientHunter is an automation workflow that uses the **Google Maps API** to discover local businesses and filter leads based on high-value outreach criteria.
 
-- `ZonovaMist` (Flutter Web frontend)
-- `ZonovaMistAPI` (Node.js/Express backend)
+The system focuses on businesses that:
+- **Do not have a website**
+- Have a **good rating**
+- Have a **strong review count**
+- Provide a **phone number with WhatsApp availability**
 
-The feature set follows the project vision from the original ClientHunter brief:
-
-- Filter businesses by rating/review thresholds
-- Keep only leads with no website and WhatsApp-ready phone numbers
-- Show business cards with image, name, rating, review count, phone, and address
-- One-click WhatsApp chat with a website-building promo message
-- Automatically copy category-relevant promo image link (Google Drive) to clipboard before opening WhatsApp
+After filtering, ClientHunter extracts the business type and contact data, then sends a relevant pre-created marketing image (based on business category) via WhatsApp.
 
 ---
 
-## Frontend (`ZonovaMist`)
+## What this project does
 
-### What it does
-
-- Loads filtered businesses from backend endpoint: `/api/businesses`
-- Displays all requested lead fields:
-  - Business image
-  - Name
-  - Rating + review count
-  - Phone number
-  - Address
-  - WhatsApp button
-- On WhatsApp button click:
-  1. Promo image link for that category is copied to clipboard
-  2. WhatsApp click-to-chat opens with pre-filled promo message
-
-### Run
-
-```bash
-cd ZonovaMist
-flutter pub get
-flutter run -d chrome --dart-define=API_BASE_URL=http://localhost:8080
-```
+1. Query business listings from Google Maps API.
+2. Filter records using lead-quality conditions.
+3. Identify WhatsApp-capable phone numbers.
+4. Classify/normalize business type.
+5. Match business type to a pre-created image asset.
+6. Send personalized outreach through WhatsApp.
 
 ---
 
-## Backend (`ZonovaMistAPI`)
+## Lead filtering logic (high level)
 
-### What it does
+A business is considered a target lead when it matches all required conditions:
 
-- Provides filtered business leads through:
-  - `GET /api/businesses?minRating=4.2&minReviews=50&waOnly=true&withoutWebsite=true`
-- Applies lead quality filtering aligned with ClientHunter rules
-- Attaches category promo image link from the provided Google Drive folder
+- Website is missing or empty.
+- Rating is above the configured threshold.
+- Review count is above the configured threshold.
+- Contact number is present and valid for WhatsApp messaging.
 
-### Run
-
-```bash
-cd ZonovaMistAPI
-npm install
-npm start
-```
-
-### Health check
-
-```bash
-curl http://localhost:8080/health
-```
+> Exact threshold values (rating/reviews) should be configured in environment variables or a config file in implementation.
 
 ---
 
-## Google Drive promo assets
+## Data points collected
 
-Configured folder:
+Typical fields collected for each business:
 
-`https://drive.google.com/drive/folders/1CMZzEObCHPTl6vFZBcdM1BI_CVqq7K9t`
+- Business name
+- Business category/type
+- Google Maps place ID
+- Rating
+- Review count
+- Phone number
+- WhatsApp availability
+- Address/location
+- Website presence status
 
-Category-to-image mapping is implemented in `ZonovaMistAPI/src/server.js` and can be updated with direct file links when exact per-category image URLs are finalized.
+---
+
+## WhatsApp outreach flow
+
+1. Build a qualified lead list from filtered business data.
+2. Select a relevant creative image for the detected business type (e.g., restaurant, salon, clinic, etc.).
+3. Compose a short message template.
+4. Send message + image to WhatsApp number.
+5. Log delivery status and errors.
+
+---
+
+## Suggested architecture
+
+### Frontend
+- Dashboard to configure filters (rating, review count, categories)
+- Lead list and status tracking
+- Campaign controls and message templates
+
+### Backend
+- Google Maps data ingestion service
+- Lead filtering engine
+- Business type classifier / mapper
+- WhatsApp sender service
+- Image asset resolver by business type
+- Logging and retry mechanisms
+
+---
+
+## Future improvements
+
+- Better business-type classification using AI/NLP.
+- Duplicate lead detection across campaigns.
+- Delivery analytics and response tracking.
+- Multi-language WhatsApp templates.
+- Time-window scheduling for outreach compliance.
+
+---
+
+## Notes
+
+- Ensure compliance with Google Maps API usage terms.
+- Ensure WhatsApp messaging complies with local regulations and platform policies.
+- Use opt-out handling and respectful outreach practices.
