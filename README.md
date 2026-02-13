@@ -129,34 +129,3 @@ From repo root:
 flutter pub get
 flutter build apk --release
 ```
-
----
-
-## iOS setup and build
-
-This repository now includes the iOS platform scaffold under `ios/`.
-
-### Prerequisites
-- Flutter SDK installed locally
-- Xcode (latest stable)
-- CocoaPods
-
-### Configure and build
-From repo root:
-
-```bash
-flutter pub get
-flutter build ios --release --no-codesign
-```
-
-For simulator build:
-
-```bash
-flutter build ios --simulator
-```
-
-Open iOS project in Xcode when signing/distribution is needed:
-
-```bash
-open ios/Runner.xcworkspace
-```
