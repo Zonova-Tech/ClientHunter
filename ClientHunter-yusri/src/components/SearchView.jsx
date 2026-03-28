@@ -42,9 +42,7 @@ const SearchView = ({ onAddToPipeline, savedLeadIds = [] }) => {
           Find Your Next <br/>
           <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-400">High-Value Client</span>
         </h1>
-        <p className="text-base sm:text-lg lg:text-xl text-slate-400 max-w-2xl leading-relaxed">
-          Find high-engagement businesses with no web presence—fast.
-        </p>
+      
       </div>
 
       {/* Main Search Interface */}
