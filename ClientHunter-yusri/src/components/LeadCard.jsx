@@ -12,7 +12,6 @@ import {
 } from 'lucide-react';
 import { 
   getLeadBadgeStyle, 
-  formatPhoneForDisplay,
   getPrimaryCategory,
   handleWhatsAppCommunication
 } from '../utils/leadUtils';
@@ -29,7 +28,6 @@ const LeadCard = ({ place, onAddToPipeline, isInPipeline = false }) => {
   const [addResult, setAddResult] = useState(null);
   const [copyingSample, setCopyingSample] = useState(false);
   const [copySampleResult, setCopySampleResult] = useState(null);
-  const [showContactNumber, setShowContactNumber] = useState(false);
 
   const badgeStyle = getLeadBadgeStyle(place.leadScore);
   const category = getPrimaryCategory(place.types);
@@ -46,6 +44,19 @@ const LeadCard = ({ place, onAddToPipeline, isInPipeline = false }) => {
   };
 
   const photoUrl = getPhotoUrl();
+
+  const getPhoneForTel = () => {
+    const phone = place?.nationalPhoneNumber || place?.internationalPhoneNumber || '';
+    if (!phone) return null;
+    const normalized = phone.replace(/[^\d+]/g, '');
+    return normalized ? `tel:${normalized}` : null;
+  };
+
+  const handleCall = () => {
+    const telHref = getPhoneForTel();
+    if (!telHref) return;
+    window.location.href = telHref;
+  };
 
   const openInMaps = () => {
     const placeId = place.placeId || place.id;
@@ -122,60 +133,34 @@ const LeadCard = ({ place, onAddToPipeline, isInPipeline = false }) => {
       </div>
 
       {/* Card Body */}
-      <div className="p-6 sm:p-8 flex-1 flex flex-col">
-        <div className="flex items-start justify-between gap-4 mb-4">
-          <h3 className="text-2xl font-black text-white line-clamp-2 group-hover:text-blue-400 transition-colors tracking-tighter min-w-0 flex-1">
+      <div className="p-5 sm:p-6 flex-1 flex flex-col">
+        <div className="flex items-center gap-4 mb-4 pb-4 border-b border-white/5 flex-nowrap">
+          <h3 className="text-2xl font-black text-white truncate group-hover:text-blue-400 transition-colors tracking-tighter min-w-0 flex-1">
             {place.displayName}
           </h3>
 
-          <div className="flex items-center gap-3 shrink-0">
-            <div className="relative">
-              <button
-                type="button"
-                onClick={() => setShowContactNumber((v) => !v)}
-                aria-label={showContactNumber ? 'Hide contact number' : 'Show contact number'}
-                aria-expanded={showContactNumber}
-                title={showContactNumber ? 'Hide contact number' : 'Show contact number'}
-                className="w-10 h-10 rounded-xl bg-green-500/5 flex items-center justify-center border border-green-500/10 hover:border-green-500/30 transition-all"
-              >
-                <Phone className="w-4 h-4 text-green-400" />
-              </button>
+          <button
+            type="button"
+            onClick={openInMaps}
+            aria-label="Open location in Google Maps"
+            title="Open in Google Maps"
+            className="w-10 h-10 shrink-0 rounded-xl bg-blue-500/5 flex items-center justify-center border border-white/5 hover:border-blue-500/30 transition-all"
+          >
+            <MapPin className="w-4 h-4 text-blue-400" />
+          </button>
 
-              {showContactNumber && (
-                <div className="absolute right-0 top-full mt-2 px-3 py-2 rounded-xl bg-slate-950/90 backdrop-blur-xl border border-white/10 shadow-2xl whitespace-nowrap">
-                  <span className="text-sm font-black text-slate-200 tracking-tight">
-                    {formatPhoneForDisplay(place.nationalPhoneNumber)}
-                  </span>
-                </div>
-              )}
-            </div>
-
-            <button
-              type="button"
-              onClick={openInMaps}
-              aria-label="Open location in Google Maps"
-              title="Open in Google Maps"
-              className="w-10 h-10 rounded-xl bg-blue-500/5 flex items-center justify-center border border-white/5 hover:border-blue-500/30 transition-all"
-            >
-              <MapPin className="w-4 h-4 text-blue-400" />
-            </button>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-6 mb-6 pb-6 border-b border-white/5">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 shrink-0">
             <Star className="w-4 h-4 text-amber-500 fill-amber-500" />
             <span className="text-white font-black text-lg">{place.rating?.toFixed(1) || 'N/A'}</span>
           </div>
-          <div className="text-slate-500 text-xs font-bold uppercase tracking-widest">
+
+          <div className="text-slate-500 text-xs font-black tracking-widest shrink-0">
             {place.userRatingCount?.toLocaleString() || 0}
           </div>
         </div>
 
-        <div className="mb-8" />
-
         {/* Action Layer */}
-        <div className="mt-auto grid grid-cols-3 gap-3">
+        <div className="mt-auto grid grid-cols-4 gap-3">
           <button
             onClick={() => handleWhatsAppCommunication(place.nationalPhoneNumber, place.displayName, category)}
             aria-label="Initiate contact"
@@ -183,6 +168,21 @@ const LeadCard = ({ place, onAddToPipeline, isInPipeline = false }) => {
             className="h-14 w-full bg-emerald-600 hover:bg-emerald-500 text-white rounded-2xl transition-all border-2 border-emerald-500/30 active:scale-95 flex items-center justify-center"
           >
             <MessageCircle className="w-5 h-5" />
+          </button>
+
+          <button
+            type="button"
+            onClick={handleCall}
+            disabled={!getPhoneForTel()}
+            aria-label="Call phone number"
+            title={getPhoneForTel() ? 'Call' : 'No phone number'}
+            className={`h-14 w-full rounded-2xl transition-all border-2 active:scale-95 flex items-center justify-center ${
+              getPhoneForTel()
+                ? 'bg-slate-900 hover:bg-slate-800 text-green-400 border-green-500/20'
+                : 'bg-slate-900 text-slate-600 border-slate-700 opacity-60 cursor-not-allowed'
+            }`}
+          >
+            <Phone className="w-5 h-5" />
           </button>
 
           <button
