@@ -1,0 +1,88 @@
+@import "tailwindcss";
+
+:root {
+  --bg-main: #020617; /* Deepest Indigo Slate */
+  --bg-card: rgba(30, 41, 59, 0.4); /* Translucent slate */
+  --bg-sidebar: #0f172a;
+  
+  --text-primary: #f8fafc;
+  --text-secondary: #94a3b8;
+  --text-muted: #64748b;
+  
+  --accent-blue: #38bdf8;
+  --accent-purple: #818cf8;
+  --accent-green: #34d399;
+  --accent-amber: #fbbf24;
+  --accent-red: #f87171;
+  
+  --border-light: rgba(255, 255, 255, 0.08); /* Subtle glass border */
+  --border-active: rgba(56, 189, 248, 0.5);
+  
+  --shadow-premium: 0 20px 25px -5px rgb(0 0 0 / 0.5), 0 8px 10px -6px rgb(0 0 0 / 0.5);
+}
+
+@layer base {
+  * {
+    @apply border-slate-800 antialiased;
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+
+  body {
+    @apply bg-slate-950 text-slate-100;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    letter-spacing: -0.01em;
+  }
+}
+
+@layer components {
+  .glass-card {
+    @apply bg-slate-900/40 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl;
+  }
+  
+  .glass-sidebar {
+    @apply bg-slate-950/80 backdrop-blur-2xl border-r border-white/5;
+  }
+
+  .nav-item-active {
+    @apply bg-blue-600/10 text-blue-400 border-l-2 border-blue-500 shadow-[inset_10px_0_20px_-10px_rgba(59,130,246,0.3)];
+  }
+
+  .premium-button {
+    @apply transition-all duration-300 active:scale-[0.97] hover:brightness-110;
+  }
+
+  .glow-on-hover:hover {
+    @apply shadow-[0_0_20px_rgba(59,130,246,0.2)];
+  }
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 10px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-slate-950;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-slate-800 rounded-full border-2 border-slate-950 hover:bg-slate-700;
+}
+
+/* Animations */
+@keyframes float {
+  0% { transform: translateY(0px); }
+  50% { transform: translateY(-5px); }
+  100% { transform: translateY(0px); }
+}
+
+.animate-float {
+  animation: float 3s ease-in-out infinite;
+}
+
+.hot-lead-glow {
+  box-shadow: 0 0 15px rgba(251, 191, 36, 0.3);
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
