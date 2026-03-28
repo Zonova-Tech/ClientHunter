@@ -58,27 +58,27 @@ const PipelineView = ({
   }
 
   return (
-    <div className="flex-1 p-12 overflow-auto bg-slate-950">
+    <div className="flex-1 p-4 sm:p-6 lg:p-12 overflow-auto bg-slate-950">
       {/* Header Section */}
-      <div className="max-w-7xl mx-auto mb-12">
+      <div className="max-w-7xl mx-auto mb-10 sm:mb-12">
         <div className="flex items-center gap-4 mb-4">
           <div className="px-3 py-1 bg-indigo-500/10 border border-indigo-500/20 rounded-full">
             <span className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-400">Inventory Management</span>
           </div>
         </div>
-        <h1 className="text-5xl font-black text-white mb-4 tracking-tighter">Your Sales <span className="text-blue-500">Pipeline</span></h1>
+        <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black text-white mb-4 tracking-tighter">Your Sales <span className="text-blue-500">Pipeline</span></h1>
         <p className="text-lg text-slate-500 font-bold max-w-2xl leading-relaxed">
           Monitor your leads across the conversion lifecycle. Use advanced filters to prioritize high-intent prospects.
         </p>
       </div>
 
       {/* Analytics Hub */}
-      <div className="max-w-7xl mx-auto grid grid-cols-5 gap-6 mb-12">
+      <div className="max-w-7xl mx-auto grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 sm:gap-6 mb-10 sm:mb-12">
         {stats.map(status => (
           <button
             key={status.value}
             onClick={() => setStatusFilter(statusFilter === status.value ? 'all' : status.value)}
-            className={`glass-card p-6 flex flex-col items-start transition-all duration-300 group hover:-translate-y-1 ${
+            className={`glass-card p-4 sm:p-6 flex flex-col items-start transition-all duration-300 group hover:-translate-y-1 ${
               statusFilter === status.value
                 ? 'ring-2 ring-blue-500/50 bg-blue-600/5'
                 : 'hover:border-white/20'
@@ -88,13 +88,13 @@ const PipelineView = ({
               <span className={`w-3 h-3 rounded-full ${status.color} shadow-lg shadow-current`}></span>
               <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">{status.label}</span>
             </div>
-            <p className="text-4xl font-black text-white group-hover:scale-110 transition-transform origin-left">{status.count}</p>
+            <p className="text-3xl sm:text-4xl font-black text-white group-hover:scale-110 transition-transform origin-left">{status.count}</p>
           </button>
         ))}
       </div>
 
       {/* Control Center */}
-      <div className="max-w-7xl mx-auto flex gap-6 mb-12">
+      <div className="max-w-7xl mx-auto flex flex-col lg:flex-row gap-4 lg:gap-6 mb-10 sm:mb-12">
         <div className="flex-1 relative group">
           <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-500/20 to-indigo-500/20 rounded-2xl blur opacity-0 group-focus-within:opacity-100 transition duration-500"></div>
           <div className="relative flex items-center">
@@ -109,11 +109,11 @@ const PipelineView = ({
           </div>
         </div>
 
-        <div className="relative">
+        <div className="relative w-full sm:w-auto">
           <select
             value={scoreFilter}
             onChange={(e) => setScoreFilter(e.target.value)}
-            className="appearance-none pl-6 pr-14 py-4 bg-slate-900 border border-white/5 rounded-2xl text-white font-black text-xs uppercase tracking-widest focus:outline-none focus:border-blue-500/50 transition-all cursor-pointer min-w-[200px] shadow-xl"
+            className="appearance-none pl-6 pr-14 py-4 bg-slate-900 border border-white/5 rounded-2xl text-white font-black text-xs uppercase tracking-widest focus:outline-none focus:border-blue-500/50 transition-all cursor-pointer w-full sm:min-w-[200px] shadow-xl"
           >
             <option value="all">Priority: All</option>
             <option value="Hot">🔥 Hot Leads</option>
@@ -126,7 +126,7 @@ const PipelineView = ({
         {(statusFilter !== 'all' || scoreFilter !== 'all' || searchTerm) && (
           <button
             onClick={() => { setStatusFilter('all'); setScoreFilter('all'); setSearchTerm(''); }}
-            className="px-6 border border-white/10 rounded-2xl text-[10px] font-black uppercase tracking-widest text-slate-500 hover:text-white hover:bg-white/5 transition-all"
+            className="px-6 py-4 border border-white/10 rounded-2xl text-[10px] font-black uppercase tracking-widest text-slate-500 hover:text-white hover:bg-white/5 transition-all w-full sm:w-auto"
           >
             Reset Filters
           </button>
@@ -148,7 +148,7 @@ const PipelineView = ({
         )}
 
         {filteredLeads.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10 pb-20">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8 lg:gap-10 pb-20">
             {filteredLeads.map(lead => (
               <PipelineCard
                 key={lead.id}
