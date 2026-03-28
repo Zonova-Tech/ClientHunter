@@ -35,46 +35,40 @@ const SearchView = ({ onAddToPipeline, savedLeadIds = [] }) => {
   ];
 
   return (
-    <div className="flex-1 p-12 overflow-auto bg-slate-950">
+    <div className="flex-1 p-4 sm:p-6 lg:p-12 overflow-auto bg-slate-950">
       {/* Header Section */}
-      <div className="max-w-6xl mx-auto mb-16">
-        <div className="flex items-center gap-4 mb-4">
-          <div className="px-3 py-1 bg-blue-500/10 border border-blue-500/20 rounded-full">
-            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-blue-400">Prospecting Engine</span>
-          </div>
-        </div>
-        <h1 className="text-5xl font-black text-white mb-6 tracking-tight leading-tight">
+      <div className="max-w-6xl mx-auto mb-10 sm:mb-16">
+        <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black text-white mb-4 sm:mb-6 tracking-tight leading-tight">
           Find Your Next <br/>
           <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-400">High-Value Client</span>
         </h1>
-        <p className="text-xl text-slate-400 max-w-2xl leading-relaxed">
-          Uncover businesses with high engagement but no digital footprint. 
-          The perfect leads for your agency, found in seconds.
+        <p className="text-base sm:text-lg lg:text-xl text-slate-400 max-w-2xl leading-relaxed">
+          Find high-engagement businesses with no web presence—fast.
         </p>
       </div>
 
       {/* Main Search Interface */}
-      <div className="max-w-6xl mx-auto mb-16 px-1">
+      <div className="max-w-6xl mx-auto mb-10 sm:mb-16 px-0 sm:px-1">
         <form onSubmit={handleSearch} className="relative group">
           <div className="absolute -inset-1 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-3xl blur opacity-25 group-focus-within:opacity-50 transition duration-1000 group-hover:duration-200"></div>
-          <div className="relative flex gap-4 bg-slate-900 border-2 border-slate-800 p-2 rounded-[2rem] shadow-2xl">
+          <div className="relative flex flex-col sm:flex-row gap-3 sm:gap-4 bg-slate-900 border-2 border-slate-800 p-2 rounded-[2rem] shadow-2xl">
             <div className="flex-1 relative flex items-center">
-              <SearchIcon className="absolute left-6 w-6 h-6 text-slate-500 group-focus-within:text-blue-400 transition-colors" />
+              <SearchIcon className="absolute left-5 sm:left-6 w-5 h-5 sm:w-6 sm:h-6 text-slate-500 group-focus-within:text-blue-400 transition-colors" />
               <input
                 type="text"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="Region or Business type... (e.g., Colombo Restaurants)"
-                className="w-full pl-16 pr-6 py-5 bg-transparent text-white text-xl font-bold placeholder-slate-600 focus:outline-none"
+                className="w-full pl-14 sm:pl-16 pr-5 sm:pr-6 py-4 sm:py-5 bg-transparent text-white text-base sm:text-lg lg:text-xl font-bold placeholder-slate-600 focus:outline-none"
               />
             </div>
             <button
               type="submit"
               disabled={loading || !query.trim()}
-              className="px-10 py-5 bg-blue-600 hover:bg-blue-500 disabled:bg-slate-800 disabled:text-slate-600 text-white rounded-[1.5rem] font-black text-lg transition-all flex items-center gap-3 shadow-xl active:scale-95"
+              aria-label={loading ? 'Analyzing' : 'Execute search'}
+              className="p-4 sm:p-5 bg-blue-600 hover:bg-blue-500 disabled:bg-slate-800 disabled:text-slate-600 text-white rounded-[1.5rem] font-black text-lg transition-all flex items-center justify-center shadow-xl active:scale-95 w-full sm:w-auto"
             >
               {loading ? <Loader2 className="w-6 h-6 animate-spin" /> : <SearchIcon className="w-6 h-6" />}
-              <span>{loading ? 'Analyzing...' : 'Execute Search'}</span>
             </button>
           </div>
         </form>
@@ -82,7 +76,7 @@ const SearchView = ({ onAddToPipeline, savedLeadIds = [] }) => {
         {/* Suggested Tags */}
         {results.length === 0 && !loading && (
           <div className="mt-8 flex flex-wrap items-center gap-3">
-            <span className="text-xs font-bold text-slate-500 uppercase tracking-widest mr-2">Signals:</span>
+            <span className="text-xs font-bold text-slate-500 uppercase tracking-widest mr-2">Example:</span>
             {suggestedSearches.map((suggestion) => (
               <button
                 key={suggestion}
@@ -100,7 +94,7 @@ const SearchView = ({ onAddToPipeline, savedLeadIds = [] }) => {
       <div className="max-w-6xl mx-auto">
         {results.length > 0 ? (
           <>
-            <div className="flex items-center justify-between mb-10 pb-6 border-b border-white/5">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8 sm:mb-10 pb-6 border-b border-white/5">
               <div>
                 <h2 className="text-2xl font-black text-white flex items-center gap-3">
                   Analysis Results
@@ -109,11 +103,11 @@ const SearchView = ({ onAddToPipeline, savedLeadIds = [] }) => {
                   </span>
                 </h2>
               </div>
-              <button onClick={clearResults} className="text-xs font-black text-slate-500 hover:text-white uppercase tracking-widest transition-colors">
+              <button onClick={clearResults} className="text-xs font-black text-slate-500 hover:text-white uppercase tracking-widest transition-colors self-start sm:self-auto">
                 Reset Workspace
               </button>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10 pb-20">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8 lg:gap-10 pb-20">
               {results.map((place) => (
                 <LeadCard
                   key={place.id || place.placeId}
@@ -125,10 +119,10 @@ const SearchView = ({ onAddToPipeline, savedLeadIds = [] }) => {
             </div>
           </>
         ) : !loading && !error && (
-          <div className="glass-card p-12 border-white/5">
-            <div className="grid md:grid-cols-2 gap-12 items-center">
+          <div className="glass-card p-6 sm:p-10 lg:p-12 border-white/5">
+            <div className="grid md:grid-cols-2 gap-8 lg:gap-12 items-center">
               <div>
-                <h3 className="text-3xl font-black text-white mb-6">Smart Intelligence Filters</h3>
+                <h3 className="text-2xl sm:text-3xl font-black text-white mb-6">Smart Intelligence Filters</h3>
                 <div className="space-y-4">
                   {[
                     { label: 'Minimum 15 High-Quality Reviews', icon: Star },

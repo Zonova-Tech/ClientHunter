@@ -48,6 +48,23 @@ const LeadCard = ({ place, onAddToPipeline, isInPipeline = false }) => {
 
   const photoUrl = getPhotoUrl();
 
+  const openInMaps = () => {
+    const placeId = place.placeId || place.id;
+    let url = '';
+
+    if (placeId) {
+      url = `https://www.google.com/maps/search/?api=1&query_place_id=${encodeURIComponent(placeId)}&query=${encodeURIComponent(place.displayName || 'Business')}`;
+    } else if (place.location && typeof place.location.lat === 'function' && typeof place.location.lng === 'function') {
+      url = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${place.location.lat()},${place.location.lng()}`)}`;
+    } else if (place.formattedAddress) {
+      url = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(place.formattedAddress)}`;
+    } else {
+      url = 'https://www.google.com/maps';
+    }
+
+    window.open(url, '_blank', 'noopener,noreferrer');
+  };
+
   const handleAddToPipeline = async () => {
     setAdding(true);
     const result = await onAddToPipeline({ ...place, category });
@@ -76,7 +93,7 @@ const LeadCard = ({ place, onAddToPipeline, isInPipeline = false }) => {
   return (
     <div className={`glass-card group overflow-hidden flex flex-col h-full transition-all duration-500 hover:-translate-y-2 hover:shadow-[0_20px_40px_-15px_rgba(59,130,246,0.3)] ${badgeStyle.glow ? 'border-amber-500/30' : 'border-white/5'}`}>
       {/* Visual Header */}
-      <div className="relative h-56 overflow-hidden">
+      <div className="relative h-44 sm:h-56 overflow-hidden">
         {photoUrl && !imageError ? (
           <img
             src={photoUrl}
@@ -110,7 +127,7 @@ const LeadCard = ({ place, onAddToPipeline, isInPipeline = false }) => {
       </div>
 
       {/* Card Body */}
-      <div className="p-8 flex-1 flex flex-col">
+      <div className="p-6 sm:p-8 flex-1 flex flex-col">
         <h3 className="text-2xl font-black text-white mb-4 line-clamp-1 group-hover:text-blue-400 transition-colors tracking-tighter">
           {place.displayName}
         </h3>
@@ -121,73 +138,83 @@ const LeadCard = ({ place, onAddToPipeline, isInPipeline = false }) => {
             <span className="text-white font-black text-lg">{place.rating?.toFixed(1) || 'N/A'}</span>
           </div>
           <div className="text-slate-500 text-xs font-bold uppercase tracking-widest">
-            {place.userRatingCount?.toLocaleString() || 0} Engagement
+            {place.userRatingCount?.toLocaleString() || 0}
           </div>
         </div>
 
-        <div className="space-y-4 mb-8">
-          <div className="flex items-center gap-4 text-slate-300 group/item">
-            <div className="w-10 h-10 rounded-xl bg-green-500/5 flex items-center justify-center border border-green-500/10 group-hover/item:border-green-500/30 transition-all">
-              <Phone className="w-4 h-4 text-green-400" />
+        <div className="mb-8">
+          <div className="flex items-center justify-between gap-4 text-slate-300 group/item">
+            <div className="flex items-center gap-4 min-w-0">
+              <div className="w-10 h-10 rounded-xl bg-green-500/5 flex items-center justify-center border border-green-500/10 group-hover/item:border-green-500/30 transition-all shrink-0">
+                <Phone className="w-4 h-4 text-green-400" />
+              </div>
+              <span className="font-bold tracking-tight truncate">{formatPhoneForDisplay(place.nationalPhoneNumber)}</span>
             </div>
-            <span className="font-bold tracking-tight">{formatPhoneForDisplay(place.nationalPhoneNumber)}</span>
-          </div>
 
-          <div className="flex items-start gap-4 text-slate-400 group/item">
-            <div className="w-10 h-10 rounded-xl bg-blue-500/5 flex items-center justify-center border border-white/5 group-hover/item:border-blue-500/30 transition-all shrink-0">
+            <button
+              type="button"
+              onClick={openInMaps}
+              aria-label="Open location in Google Maps"
+              className="w-10 h-10 rounded-xl bg-blue-500/5 flex items-center justify-center border border-white/5 group-hover/item:border-blue-500/30 transition-all shrink-0"
+            >
               <MapPin className="w-4 h-4 text-blue-400" />
-            </div>
-            <span className="text-sm font-bold leading-relaxed line-clamp-2 pt-2">{place.formattedAddress}</span>
+            </button>
           </div>
         </div>
 
         {/* Action Layer */}
-        <div className="mt-auto space-y-3">
+        <div className="mt-auto grid grid-cols-4 gap-3">
           <button
             onClick={() => handleWhatsAppCommunication(place.nationalPhoneNumber, place.displayName, category)}
-            className="w-full flex items-center justify-center gap-3 px-6 py-4 bg-emerald-600 hover:bg-emerald-500 text-white rounded-2xl font-black text-sm uppercase tracking-widest transition-all shadow-xl shadow-emerald-600/10 active:scale-95"
+            aria-label="Initiate contact"
+            title="Initiate contact"
+            className="h-14 w-full bg-emerald-600 hover:bg-emerald-500 text-white rounded-2xl transition-all border-2 border-emerald-500/30 active:scale-95 flex items-center justify-center"
           >
             <MessageCircle className="w-5 h-5" />
-            Initiate Contact
           </button>
-          
-          <div className="flex gap-3">
-            <button
-              onClick={handleAddToPipeline}
-              disabled={adding || addResult?.success || isInPipeline}
-              className={`flex-1 flex items-center justify-center gap-3 px-6 py-4 rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] transition-all border-2 ${
-                addResult?.success || isInPipeline
-                  ? 'bg-blue-600/10 text-blue-400 border-blue-500/30'
-                  : 'bg-slate-900 hover:bg-slate-800 text-white border-slate-700 active:scale-95'
-              }`}
-            >
-              {adding ? <Loader2 className="w-4 h-4 animate-spin" /> : (addResult?.success || isInPipeline ? <Check className="w-4 h-4" /> : <Plus className="w-4 h-4" />)}
-              {adding ? 'Processing...' : (addResult?.success || isInPipeline ? 'In Pipeline' : 'Add to Pipeline')}
-            </button>
 
-            <button
-              onClick={handleCopySampleImage}
-              disabled={copyingSample}
-              className="p-4 bg-slate-900 hover:bg-slate-800 text-slate-400 border-2 border-slate-700 rounded-2xl transition-all active:scale-95"
-              title={copySampleResult?.message || 'Copy sample image'}
-            >
-              {copyingSample
-                ? <Loader2 className="w-5 h-5 animate-spin" />
-                : (copySampleResult?.success
-                  ? <Check className="w-5 h-5" />
-                  : (copySampleResult
-                    ? <X className="w-5 h-5" />
-                    : <Copy className="w-5 h-5" />))}
-            </button>
+          <button
+            onClick={handleAddToPipeline}
+            disabled={adding || addResult?.success || isInPipeline}
+            aria-label={adding ? 'Processing' : (addResult?.success || isInPipeline ? 'In pipeline' : 'Add to pipeline')}
+            title={adding ? 'Processing...' : (addResult?.success || isInPipeline ? 'In pipeline' : 'Add to pipeline')}
+            className={`h-14 w-full rounded-2xl transition-all border-2 flex items-center justify-center ${
+              addResult?.success || isInPipeline
+                ? 'bg-blue-600/10 text-blue-400 border-blue-500/30'
+                : 'bg-slate-900 hover:bg-slate-800 text-white border-slate-700 active:scale-95'
+            }`}
+          >
+            {adding
+              ? <Loader2 className="w-5 h-5 animate-spin" />
+              : (addResult?.success || isInPipeline
+                ? <Check className="w-5 h-5" />
+                : <Plus className="w-5 h-5" />)}
+          </button>
 
-            <button
-              onClick={handleTestWhatsApp}
-              className="p-4 bg-slate-900 hover:bg-slate-800 text-slate-400 border-2 border-slate-700 rounded-2xl transition-all active:scale-95"
-              title="Intelligence Check"
-            >
-              <ExternalLink className="w-5 h-5" />
-            </button>
-          </div>
+          <button
+            onClick={handleCopySampleImage}
+            disabled={copyingSample}
+            aria-label={copySampleResult?.message || 'Copy sample image'}
+            title={copySampleResult?.message || 'Copy sample image'}
+            className="h-14 w-full bg-slate-900 hover:bg-slate-800 text-slate-400 border-2 border-slate-700 rounded-2xl transition-all active:scale-95 flex items-center justify-center"
+          >
+            {copyingSample
+              ? <Loader2 className="w-5 h-5 animate-spin" />
+              : (copySampleResult?.success
+                ? <Check className="w-5 h-5" />
+                : (copySampleResult
+                  ? <X className="w-5 h-5" />
+                  : <Copy className="w-5 h-5" />))}
+          </button>
+
+          <button
+            onClick={handleTestWhatsApp}
+            aria-label="Intelligence check"
+            title="Intelligence check"
+            className="h-14 w-full bg-slate-900 hover:bg-slate-800 text-slate-400 border-2 border-slate-700 rounded-2xl transition-all active:scale-95 flex items-center justify-center"
+          >
+            <ExternalLink className="w-5 h-5" />
+          </button>
         </div>
       </div>
     </div>

@@ -29,9 +29,9 @@ const Sidebar = ({ activeView, onViewChange, stats }) => {
   ];
 
   return (
-    <aside className="w-72 glass-sidebar flex flex-col h-screen sticky top-0 z-50">
+    <aside className="w-full md:w-72 glass-sidebar flex flex-col md:h-screen md:sticky md:top-0 z-50 border-b border-white/5 md:border-b-0">
       {/* Logo Section */}
-      <div className="px-8 py-12">
+      <div className="px-4 sm:px-6 md:px-8 py-6 md:py-12">
         <div className="flex items-center gap-4 group cursor-pointer">
           <div className="w-12 h-12 bg-gradient-to-tr from-blue-500 via-indigo-500 to-purple-600 rounded-2xl flex items-center justify-center shadow-lg shadow-blue-500/20 group-hover:scale-110 transition-transform duration-500">
             <Target className="w-7 h-7 text-white" />
@@ -40,7 +40,7 @@ const Sidebar = ({ activeView, onViewChange, stats }) => {
             <h1 className="text-2xl font-black text-white tracking-tighter bg-clip-text">
               Client Hunter
             </h1>
-            <p className="text-[10px] uppercase tracking-[0.2em] font-bold text-slate-500">
+            <p className="text-[10px] uppercase tracking-[0.2em] font-bold text-slate-500 hidden sm:block">
               Lead Generation CRM
             </p>
           </div>
@@ -48,12 +48,12 @@ const Sidebar = ({ activeView, onViewChange, stats }) => {
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 px-4 space-y-2">
+      <nav className="md:flex-1 px-4 pb-4 md:pb-0 flex md:block gap-2 md:space-y-2 overflow-x-auto md:overflow-visible">
         {navItems.map(item => (
           <button
             key={item.id}
             onClick={() => onViewChange(item.id)}
-            className={`w-full group flex items-center gap-4 px-5 py-4 rounded-2xl transition-all duration-300 relative overflow-hidden ${
+            className={`w-full md:w-full min-w-[180px] md:min-w-0 shrink-0 group flex items-center gap-4 px-4 sm:px-5 py-3 sm:py-4 rounded-2xl transition-all duration-300 relative overflow-hidden ${
               activeView === item.id
                 ? 'bg-blue-600/10 text-blue-400 shadow-[inset_0_0_20px_rgba(59,130,246,0.05)]'
                 : 'text-slate-400 hover:bg-white/5 hover:text-slate-200'
@@ -66,7 +66,7 @@ const Sidebar = ({ activeView, onViewChange, stats }) => {
             
             <item.icon className={`w-5 h-5 transition-transform duration-300 ${activeView === item.id ? 'scale-110' : 'group-hover:scale-110'}`} />
             
-            <span className="flex-1 text-left font-bold tracking-tight text-sm uppercase">
+            <span className="flex-1 text-left font-bold tracking-tight text-sm uppercase whitespace-nowrap">
               {item.label}
             </span>
 
@@ -84,7 +84,7 @@ const Sidebar = ({ activeView, onViewChange, stats }) => {
       </nav>
 
       {/* Stats Panel */}
-      <div className="p-6">
+      <div className="p-6 hidden md:block">
         <div className="bg-slate-900/50 rounded-3xl p-6 border border-white/5 space-y-5">
           <h3 className="text-[10px] font-black text-slate-500 uppercase tracking-[0.3em]">
             Real-time Metrics
@@ -125,7 +125,7 @@ const Sidebar = ({ activeView, onViewChange, stats }) => {
       </div>
 
       {/* Footer */}
-      <div className="px-8 py-10 opacity-40">
+      <div className="px-8 py-10 opacity-40 hidden md:block">
         <p className="text-[9px] font-black uppercase tracking-[0.3em] text-slate-500 text-center">
           Engineered in 🇱🇰
         </p>
