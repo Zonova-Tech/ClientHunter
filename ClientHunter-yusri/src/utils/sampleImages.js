@@ -1,6 +1,18 @@
 // Utilities for mapping a business category to a sample image living in
 // `public/sample-images/samples/` and copying it to the clipboard.
 
+// Optional: Google Drive-backed samples
+// Provide file IDs for categories (files must be shared publicly: "Anyone with the link").
+// Keys should be normalized category names (lowercase, spaces removed), e.g.:
+//   restaurant: '1AbC...'
+//   salon: '1XyZ...'
+//   realestate: '...'
+export const GOOGLE_DRIVE_CATEGORY_FILE_IDS = {
+  // restaurant: 'YOUR_FILE_ID_HERE',
+  // salon: 'YOUR_FILE_ID_HERE',
+  // realestate: 'YOUR_FILE_ID_HERE',
+};
+
 const SAMPLE_IMAGE_FILES = [
   'Apartments.png',
   'ATM.png',
@@ -73,6 +85,36 @@ const normalizeKey = (value) => {
     .trim()
     .replace(/\.[a-z0-9]+$/i, '')
     .replace(/[^a-z0-9]+/g, '');
+};
+
+const getGoogleDriveDownloadUrl = (fileId) => {
+  if (!fileId) return null;
+
+  // `drive.googleusercontent.com` tends to behave better for direct content fetches.
+  // Fetch will follow redirects; files must be publicly accessible.
+  return `https://drive.googleusercontent.com/uc?id=${encodeURIComponent(fileId)}&export=download`;
+};
+
+const getFileExtensionFromMime = (mimeType) => {
+  if (!mimeType) return 'png';
+  const normalized = String(mimeType).toLowerCase();
+  if (normalized.includes('png')) return 'png';
+  if (normalized.includes('jpeg') || normalized.includes('jpg')) return 'jpg';
+  if (normalized.includes('webp')) return 'webp';
+  if (normalized.includes('gif')) return 'gif';
+  return 'png';
+};
+
+const downloadBlob = (blob, filename) => {
+  const objectUrl = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = objectUrl;
+  a.download = filename;
+  a.style.display = 'none';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(objectUrl);
 };
 
 const fileBaseName = (filename) => filename.replace(/\.[a-z0-9]+$/i, '');
@@ -153,13 +195,38 @@ export const getSampleImageFileForCategory = (category) => {
   return best?.file ?? null;
 };
 
+export const getGoogleDriveFileIdForCategory = (category) => {
+  const normalized = normalizeKey(category);
+  if (!normalized) return null;
+
+  // Try direct normalized key
+  if (GOOGLE_DRIVE_CATEGORY_FILE_IDS[normalized]) return GOOGLE_DRIVE_CATEGORY_FILE_IDS[normalized];
+
+  // Reuse local alias logic so e.g. "lodging" can map to "hotel" etc.
+  if (CATEGORY_ALIASES[normalized]) {
+    const aliasedNormalized = normalizeKey(fileBaseName(CATEGORY_ALIASES[normalized]));
+    if (GOOGLE_DRIVE_CATEGORY_FILE_IDS[aliasedNormalized]) return GOOGLE_DRIVE_CATEGORY_FILE_IDS[aliasedNormalized];
+  }
+
+  // Try plural/singular variants
+  for (const variant of guessPluralVariants(normalized)) {
+    if (GOOGLE_DRIVE_CATEGORY_FILE_IDS[variant]) return GOOGLE_DRIVE_CATEGORY_FILE_IDS[variant];
+  }
+
+  return null;
+};
+
 export const getSampleImageUrlForCategory = (category) => {
+  const driveId = getGoogleDriveFileIdForCategory(category);
+  if (driveId) return getGoogleDriveDownloadUrl(driveId);
+
   const file = getSampleImageFileForCategory(category);
   if (!file) return null;
   return `/sample-images/samples/${encodeURIComponent(file)}`;
 };
 
-export const copySampleImageToClipboard = async (category) => {
+export const copySampleImageToClipboard = async (category, options = {}) => {
+  const { download = false } = options;
   const url = getSampleImageUrlForCategory(category);
   if (!url) {
     return { success: false, message: `No sample image found for "${category}".` };
@@ -170,8 +237,13 @@ export const copySampleImageToClipboard = async (category) => {
 
   // If we can copy an image blob, do that.
   if (navigator?.clipboard?.write && ClipboardItemCtor) {
-    const response = await fetch(url);
-    if (!response.ok) throw new Error(`Failed to fetch sample image (${response.status}).`);
+    const response = await fetch(url, { mode: 'cors', credentials: 'omit', cache: 'no-cache' });
+    if (!response.ok) {
+      const hint = url.includes('drive.google')
+        ? ' Make sure the Google Drive file is shared publicly (Anyone with the link) and not blocked by CORS.'
+        : '';
+      throw new Error(`Failed to fetch sample image (${response.status}).${hint}`);
+    }
 
     const blob = await response.blob();
     const mimeType = blob.type || 'image/png';
@@ -179,6 +251,12 @@ export const copySampleImageToClipboard = async (category) => {
     await navigator.clipboard.write([
       new ClipboardItemCtor({ [mimeType]: blob })
     ]);
+
+    if (download) {
+      const ext = getFileExtensionFromMime(mimeType);
+      const safeBase = normalizeKey(category) || 'sample';
+      downloadBlob(blob, `${safeBase}.${ext}`);
+    }
 
     return { success: true, message: 'Sample image copied to clipboard.', url };
   }

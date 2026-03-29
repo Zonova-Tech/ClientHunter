@@ -13,15 +13,14 @@ import {
   Globe,
   Mail,
   ChevronDown,
-  ExternalLink
+  Loader2
 } from 'lucide-react';
 import {
   getLeadBadgeStyle,
-  getWhatsAppUrl,
-  formatPhoneForDisplay,
   LEAD_STATUSES,
-  getStatusColor,
-  handleWhatsAppCommunication
+  handleWhatsAppCommunication,
+  getLeadStatusMeta,
+  normalizeLeadStatus
 } from '../utils/leadUtils';
 import { copySampleImageToClipboard } from '../utils/sampleImages';
 
@@ -36,6 +35,8 @@ const PipelineCard = ({
   onUpdateContact,
   onDelete
 }) => {
+  const [imageLoaded, setImageLoaded] = useState(false);
+  const [imageError, setImageError] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [notes, setNotes] = useState(lead.notes || '');
   const [email, setEmail] = useState(lead.email || '');
@@ -46,6 +47,38 @@ const PipelineCard = ({
   const [copySampleResult, setCopySampleResult] = useState(null);
 
   const badgeStyle = getLeadBadgeStyle(lead.leadScore);
+  const category = lead.category || 'Business';
+  const photoUrl = lead.images && lead.images[0] ? lead.images[0] : null;
+  const statusMeta = getLeadStatusMeta(lead.status);
+  const statusValue = normalizeLeadStatus(lead.status);
+
+  const getPhoneForTel = () => {
+    const phone = lead?.phone || '';
+    if (!phone) return null;
+    const normalized = phone.replace(/[^\d+]/g, '');
+    return normalized ? `tel:${normalized}` : null;
+  };
+
+  const handleCall = () => {
+    const telHref = getPhoneForTel();
+    if (!telHref) return;
+    window.location.href = telHref;
+  };
+
+  const openInMaps = () => {
+    const placeId = lead.placeId;
+    let url = '';
+
+    if (placeId) {
+      url = `https://www.google.com/maps/search/?api=1&query_place_id=${encodeURIComponent(placeId)}&query=${encodeURIComponent(lead.businessName || 'Business')}`;
+    } else if (lead.address) {
+      url = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(lead.address)}`;
+    } else {
+      url = 'https://www.google.com/maps';
+    }
+
+    window.open(url, '_blank', 'noopener,noreferrer');
+  };
 
   const handleSaveNotes = async () => {
     await onUpdateNotes(lead.id, notes);
@@ -75,7 +108,7 @@ const PipelineCard = ({
     try {
       const result = await copySampleImageToClipboard(lead.category);
       setCopySampleResult(result);
-    } catch (e) {
+    } catch {
       setCopySampleResult({ success: false, message: 'Failed to copy sample image.' });
     } finally {
       setCopyingSample(false);
@@ -83,110 +116,118 @@ const PipelineCard = ({
     }
   };
 
-  const formatDate = (date) => {
-    if (!date) return '';
-    const d = date instanceof Date ? date : new Date(date);
-    return d.toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric'
-    });
-  };
-
   return (
-    <div className={`glass-card group overflow-hidden transition-all duration-500 ${deleting ? 'opacity-50 grayscale' : 'hover:-translate-y-2'} shadow-2xl`}>
-      {/* Header with image and badges */}
-      <div className="relative h-32 overflow-hidden">
-        {/* Cover Image with Gradient */}
-        <div className="absolute inset-0 bg-slate-900">
-          {lead.images && lead.images[0] && (
-            <img
-              src={lead.images[0]}
-              alt={lead.businessName}
-              className="w-full h-full object-cover opacity-40 group-hover:scale-110 transition-transform duration-[3s]"
-            />
-          )}
-          <div className="absolute inset-0 bg-gradient-to-br from-slate-950/80 via-transparent to-slate-950/90"></div>
-        </div>
+    <div className={`glass-card group overflow-hidden flex flex-col h-full transition-all duration-500 ${deleting ? 'opacity-50 grayscale' : 'hover:-translate-y-2 hover:shadow-[0_20px_40px_-15px_rgba(59,130,246,0.3)]'} ${badgeStyle.glow ? 'border-amber-500/30' : 'border-white/5'}`}>
+      {/* Visual Header */}
+      <div className="relative h-44 sm:h-56 overflow-hidden">
+        {photoUrl && !imageError ? (
+          <img
+            src={photoUrl}
+            alt={lead.businessName}
+            className={`w-full h-full object-cover transition-all duration-1000 group-hover:scale-110 ${
+              imageLoaded ? 'opacity-70 group-hover:opacity-100' : 'opacity-0'
+            }`}
+            onLoad={() => setImageLoaded(true)}
+            onError={() => setImageError(true)}
+          />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center bg-slate-900">
+            <div className="text-5xl opacity-20 filter grayscale group-hover:grayscale-0 group-hover:opacity-40 transition-all">🏢</div>
+          </div>
+        )}
 
-        {/* Badges overlay */}
-        <div className="absolute top-4 left-4 flex gap-2">
-          <span className={`px-2 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest backdrop-blur-md border border-white/10 ${badgeStyle.glow ? 'hot-lead-glow' : ''} ${badgeStyle.bgColor} ${badgeStyle.textColor}`}>
+        <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-transparent to-transparent opacity-60"></div>
+
+        <div className="absolute top-4 left-4 z-10 flex flex-col gap-2">
+          <div className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg backdrop-blur-md border border-white/10 ${badgeStyle.bgColor} ${badgeStyle.textColor}`}>
             {badgeStyle.text}
-          </span>
+          </div>
         </div>
 
-        {/* Status Dropdown */}
-        <div className="absolute top-4 right-4">
-          <button
-            onClick={() => setShowStatusDropdown(!showStatusDropdown)}
-            className={`flex items-center gap-2 px-4 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest text-white backdrop-blur-md border border-white/10 ${getStatusColor(lead.status)} hover:brightness-125 transition-all shadow-xl`}
-          >
-            {lead.status}
-            <ChevronDown className={`w-3 h-3 transition-transform ${showStatusDropdown ? 'rotate-180' : ''}`} />
-          </button>
+        <div className="absolute top-4 right-4 z-10 flex flex-col items-end gap-2">
+          <div className="px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest bg-slate-950/80 text-blue-400 backdrop-blur-md border border-white/10">
+            {category}
+          </div>
 
-          {showStatusDropdown && (
-            <div className="absolute top-full right-0 mt-2 bg-slate-900/95 backdrop-blur-2xl rounded-2xl shadow-2xl border border-white/10 overflow-hidden z-20 min-w-[160px] animate-in slide-in-from-top-2 duration-300">
-              {LEAD_STATUSES.map(status => (
-                <button
-                  key={status.value}
-                  onClick={() => handleStatusChange(status.value)}
-                  className={`w-full px-5 py-3 text-left text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-white hover:bg-white/5 transition-all flex items-center gap-3 ${lead.status === status.value ? 'bg-white/5 text-blue-400' : ''
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setShowStatusDropdown(!showStatusDropdown)}
+              className="flex items-center gap-2 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest bg-slate-950/80 text-white backdrop-blur-md border border-white/10 hover:border-white/20 transition-all"
+              aria-label={`Status: ${statusMeta.label}`}
+              title="Change status"
+            >
+              <span className={`w-2 h-2 rounded-full ${statusMeta.color}`}></span>
+              {statusMeta.label}
+              <ChevronDown className={`w-3 h-3 transition-transform ${showStatusDropdown ? 'rotate-180' : ''}`} />
+            </button>
+
+            {showStatusDropdown && (
+              <div className="absolute top-full right-0 mt-2 bg-slate-900/95 backdrop-blur-2xl rounded-2xl shadow-2xl border border-white/10 overflow-hidden z-20 min-w-[170px] animate-in slide-in-from-top-2 duration-300">
+                {LEAD_STATUSES.map(status => (
+                  <button
+                    key={status.value}
+                    type="button"
+                    onClick={() => handleStatusChange(status.value)}
+                    className={`w-full px-5 py-3 text-left text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-white hover:bg-white/5 transition-all flex items-center gap-3 ${
+                      statusValue === status.value ? 'bg-white/5 text-blue-400' : ''
                     }`}
-                >
-                  <span className={`w-2 h-2 rounded-full ${status.color}`}></span>
-                  {status.label}
-                </button>
-              ))}
-            </div>
-          )}
+                  >
+                    <span className={`w-2 h-2 rounded-full ${status.color}`}></span>
+                    {status.label}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
-      {/* Content Body */}
-      <div className="p-8">
-        {/* Business Name & Meta */}
-        <div className="mb-6">
-          <h3 className="text-2xl font-black text-white mb-2 tracking-tighter group-hover:text-blue-400 transition-colors">
+      {/* Card Body */}
+      <div className="p-5 sm:p-6 flex-1 flex flex-col">
+        <div className="flex items-center gap-4 mb-4 pb-4 border-b border-white/5 flex-nowrap">
+          <h3 className="text-2xl font-black text-white truncate group-hover:text-blue-400 transition-colors tracking-tighter min-w-0 flex-1">
             {lead.businessName}
           </h3>
-          <div className="flex items-center gap-3 text-slate-500 text-[10px] font-black uppercase tracking-widest">
-            <span className="text-blue-400">{lead.category}</span>
-            <span className="opacity-20">•</span>
-            <span>Captured {formatDate(lead.createdAt)}</span>
-          </div>
-        </div>
 
-        <div className="flex items-center gap-6 mb-8 pb-6 border-b border-white/5">
-          <div className="flex items-center gap-1.5">
+          <button
+            type="button"
+            onClick={openInMaps}
+            aria-label="Open location in Google Maps"
+            title="Open in Google Maps"
+            className="w-10 h-10 shrink-0 rounded-xl bg-blue-500/5 flex items-center justify-center border border-white/5 hover:border-blue-500/30 transition-all"
+          >
+            <MapPin className="w-4 h-4 text-blue-400" />
+          </button>
+
+          <button
+            type="button"
+            onClick={handleDelete}
+            disabled={deleting}
+            aria-label="Remove from pipeline"
+            title={deleting ? 'Removing...' : 'Remove from pipeline'}
+            className={`w-10 h-10 shrink-0 rounded-xl flex items-center justify-center border transition-all ${
+              deleting
+                ? 'bg-slate-900 text-slate-600 border-white/5 opacity-60 cursor-not-allowed'
+                : 'bg-red-600/10 hover:bg-red-600/20 text-red-500 border-red-500/20'
+            }`}
+          >
+            <Trash2 className="w-4 h-4" />
+          </button>
+
+          <div className="flex items-center gap-2 shrink-0">
             <Star className="w-4 h-4 text-amber-500 fill-amber-500" />
-            <span className="text-white font-black">{lead.rating?.toFixed(1) || 'N/A'}</span>
+            <span className="text-white font-black text-lg">{lead.rating?.toFixed(1) || 'N/A'}</span>
           </div>
-          <div className="text-[10px] font-black text-slate-500 uppercase tracking-widest">
-            {lead.ratingCount?.toLocaleString() || 0} Engagement Signal
-          </div>
-        </div>
 
-        {/* Contact Strip */}
-        <div className="grid grid-cols-2 gap-4 mb-8">
-          <div className="bg-slate-900/50 p-4 rounded-2xl border border-white/5 group-hover:border-green-500/20 transition-colors">
-            <Phone className="w-4 h-4 text-green-400 mb-2" />
-            <span className="block text-[10px] font-black text-slate-500 uppercase mb-1">Mobile Path</span>
-            <span className="text-sm font-bold text-slate-200">{formatPhoneForDisplay(lead.phone)}</span>
+          <div className="text-slate-500 text-xs font-black tracking-widest shrink-0">
+            {lead.ratingCount?.toLocaleString() || 0}
           </div>
-          {lead.address && (
-            <div className="bg-slate-900/50 p-4 rounded-2xl border border-white/5 group-hover:border-blue-500/20 transition-colors">
-              <MapPin className="w-4 h-4 text-blue-400 mb-2" />
-              <span className="block text-[10px] font-black text-slate-500 uppercase mb-1">Region</span>
-              <span className="text-xs font-bold text-slate-200 line-clamp-1">{lead.address}</span>
-            </div>
-          )}
         </div>
 
         {/* Editable Segment */}
         {isEditing ? (
-          <div className="space-y-4 mb-8 p-4 bg-slate-950/50 rounded-2xl border border-white/5 animate-in fade-in duration-500">
+          <div className="space-y-4 mb-4 p-4 bg-slate-950/50 rounded-2xl border border-white/5 animate-in fade-in duration-500">
             <div>
               <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Electronic Mail</label>
               <div className="flex items-center gap-3 bg-slate-900 rounded-xl px-4 py-3 border border-white/5">
@@ -225,7 +266,7 @@ const PipelineCard = ({
             </div>
           </div>
         ) : (
-          <div className="space-y-4 mb-8">
+          <div className="space-y-4 mb-4">
             {(lead.email || lead.webUrl) && (
               <div className="grid grid-cols-1 gap-2">
                 {lead.email && (
@@ -252,49 +293,82 @@ const PipelineCard = ({
           </div>
         )}
 
-        {/* Tactical Actions */}
-        <div className="flex gap-3">
+        {/* Action Layer */}
+        <div className="mt-auto grid grid-cols-4 gap-3">
           <button
-            onClick={() => handleWhatsAppCommunication(lead.phone, lead.businessName, lead.category)}
-            className="flex-1 flex items-center justify-center gap-3 px-6 py-4 bg-emerald-600 hover:bg-emerald-500 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all shadow-xl shadow-emerald-600/10 active:scale-95"
+            type="button"
+            onClick={() => handleWhatsAppCommunication(lead.phone, lead.businessName, category)}
+            aria-label="Initiate contact"
+            title="Initiate contact"
+            className="h-14 w-full bg-emerald-600 hover:bg-emerald-500 text-white rounded-2xl transition-all border-2 border-emerald-500/30 active:scale-95 flex items-center justify-center"
           >
             <MessageCircle className="w-5 h-5" />
-            WhatsApp
           </button>
 
           <button
-            onClick={handleCopySampleImage}
-            disabled={copyingSample}
-            className="p-4 bg-slate-900 hover:bg-slate-800 text-slate-400 border border-white/5 rounded-2xl transition-all active:scale-95"
-            title={copySampleResult?.message || 'Copy sample image'}
+            type="button"
+            onClick={handleCall}
+            disabled={!getPhoneForTel()}
+            aria-label="Call phone number"
+            title={getPhoneForTel() ? 'Call' : 'No phone number'}
+            className={`h-14 w-full rounded-2xl transition-all border-2 active:scale-95 flex items-center justify-center ${
+              getPhoneForTel()
+                ? 'bg-slate-900 hover:bg-slate-800 text-green-400 border-green-500/20'
+                : 'bg-slate-900 text-slate-600 border-slate-700 opacity-60 cursor-not-allowed'
+            }`}
           >
-            {copyingSample
-              ? <ExternalLink className="w-5 h-5 opacity-60" />
-              : (copySampleResult?.success
-                ? <Check className="w-5 h-5" />
-                : (copySampleResult
-                  ? <X className="w-5 h-5" />
-                  : <Copy className="w-5 h-5" />))}
+            <Phone className="w-5 h-5" />
           </button>
 
           {isEditing ? (
-            <>
-              <button onClick={handleSaveNotes} className="p-4 bg-blue-600 hover:bg-blue-500 text-white rounded-2xl shadow-xl shadow-blue-500/20 transition-all active:scale-95">
-                <Save className="w-5 h-5" />
-              </button>
-              <button onClick={() => setIsEditing(false)} className="p-4 bg-slate-900 hover:bg-slate-800 text-slate-500 rounded-2xl border border-white/5 transition-all">
-                <X className="w-5 h-5" />
-              </button>
-            </>
+            <button
+              type="button"
+              onClick={handleSaveNotes}
+              aria-label="Save"
+              title="Save"
+              className="h-14 w-full bg-blue-600 hover:bg-blue-500 text-white rounded-2xl transition-all border-2 border-blue-500/30 active:scale-95 flex items-center justify-center"
+            >
+              <Save className="w-5 h-5" />
+            </button>
           ) : (
-            <>
-              <button onClick={() => setIsEditing(true)} className="p-4 bg-slate-900 hover:bg-slate-800 text-slate-400 border border-white/5 rounded-2xl transition-all active:scale-95">
-                <Edit3 className="w-5 h-5" />
-              </button>
-              <button onClick={handleDelete} disabled={deleting} className="p-4 bg-red-600/10 hover:bg-red-600/20 text-red-500 border border-red-500/20 rounded-2xl transition-all active:scale-95">
-                <Trash2 className="w-5 h-5" />
-              </button>
-            </>
+            <button
+              type="button"
+              onClick={handleCopySampleImage}
+              disabled={copyingSample}
+              aria-label={copySampleResult?.message || 'Copy sample image'}
+              title={copySampleResult?.message || 'Copy sample image'}
+              className="h-14 w-full bg-slate-900 hover:bg-slate-800 text-slate-400 border-2 border-slate-700 rounded-2xl transition-all active:scale-95 flex items-center justify-center"
+            >
+              {copyingSample
+                ? <Loader2 className="w-5 h-5 animate-spin" />
+                : (copySampleResult?.success
+                  ? <Check className="w-5 h-5" />
+                  : (copySampleResult
+                    ? <X className="w-5 h-5" />
+                    : <Copy className="w-5 h-5" />))}
+            </button>
+          )}
+
+          {isEditing ? (
+            <button
+              type="button"
+              onClick={() => setIsEditing(false)}
+              aria-label="Cancel editing"
+              title="Cancel"
+              className="h-14 w-full bg-slate-900 hover:bg-slate-800 text-slate-500 border-2 border-slate-700 rounded-2xl transition-all active:scale-95 flex items-center justify-center"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setIsEditing(true)}
+              aria-label="Edit"
+              title="Edit"
+              className="h-14 w-full bg-slate-900 hover:bg-slate-800 text-slate-400 border-2 border-slate-700 rounded-2xl transition-all active:scale-95 flex items-center justify-center"
+            >
+              <Edit3 className="w-5 h-5" />
+            </button>
           )}
         </div>
       </div>

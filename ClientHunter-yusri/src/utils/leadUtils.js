@@ -226,11 +226,38 @@ export const getPrimaryCategory = (types) => {
  */
 export const LEAD_STATUSES = [
   { value: 'New', label: 'New', color: 'bg-slate-500' },
-  { value: 'Qualified', label: 'Qualified', color: 'bg-blue-500' },
   { value: 'Contacted', label: 'Contacted', color: 'bg-purple-500' },
-  { value: 'Interested', label: 'Interested', color: 'bg-amber-500' },
-  { value: 'Closed', label: 'Closed', color: 'bg-green-500' }
+  { value: 'Lead', label: 'Lead', color: 'bg-blue-500' }
 ];
+
+/**
+ * Normalizes legacy lead statuses into the current 3-status model.
+ * Keeps older saved leads readable without requiring a DB migration.
+ * @param {string} status
+ * @returns {'New' | 'Contacted' | 'Lead'}
+ */
+export const normalizeLeadStatus = (status) => {
+  const normalized = String(status || '').trim().toLowerCase();
+
+  if (!normalized) return 'New';
+  if (normalized === 'new') return 'New';
+  if (normalized === 'contacted') return 'Contacted';
+  if (normalized === 'lead') return 'Lead';
+
+  // Legacy statuses collapse into "Lead"
+  if (normalized === 'qualified' || normalized === 'interested' || normalized === 'closed') return 'Lead';
+
+  return 'New';
+};
+
+/**
+ * Gets status meta (label/color) for any status (including legacy ones).
+ * @param {string} status
+ */
+export const getLeadStatusMeta = (status) => {
+  const normalized = normalizeLeadStatus(status);
+  return LEAD_STATUSES.find(s => s.value === normalized) || LEAD_STATUSES[0];
+};
 
 /**
  * Gets status color class
@@ -238,8 +265,7 @@ export const LEAD_STATUSES = [
  * @returns {string} - Tailwind color class
  */
 export const getStatusColor = (status) => {
-  const statusObj = LEAD_STATUSES.find(s => s.value === status);
-  return statusObj ? statusObj.color : 'bg-slate-500';
+  return getLeadStatusMeta(status).color;
 };
 
 
