@@ -38,7 +38,7 @@ const Sidebar = ({ activeView, onViewChange, stats }) => {
           </div>
           <div>
             <h1 className="text-2xl font-black text-white tracking-tighter bg-clip-text">
-              Client Hunter
+              Client Hunterrrrrrrrrrrrrrr
             </h1>
             <p className="text-[10px] uppercase tracking-[0.2em] font-bold text-slate-500 hidden sm:block">
               Lead Generation CRM
