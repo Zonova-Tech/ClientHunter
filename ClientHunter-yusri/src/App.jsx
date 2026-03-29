@@ -3,6 +3,7 @@ import Sidebar from './components/Sidebar';
 import SearchView from './components/SearchView';
 import PipelineView from './components/PipelineView';
 import useLeads from './hooks/useLeads';
+import { normalizeLeadStatus } from './utils/leadUtils';
 
 /**
  * Main App Component
@@ -28,7 +29,10 @@ function App() {
     return {
       totalLeads: leads.length,
       hotLeads: leads.filter(l => l.leadScore === 'Hot').length,
-      contacted: leads.filter(l => l.status === 'Contacted' || l.status === 'Interested' || l.status === 'Closed').length
+      contacted: leads.filter(l => {
+        const status = normalizeLeadStatus(l.status);
+        return status === 'Contacted' || status === 'Lead';
+      }).length
     };
   }, [leads]);
 

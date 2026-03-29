@@ -8,7 +8,7 @@ import {
   TrendingUp
 } from 'lucide-react';
 import PipelineCard from './PipelineCard';
-import { LEAD_STATUSES } from '../utils/leadUtils';
+import { LEAD_STATUSES, normalizeLeadStatus } from '../utils/leadUtils';
 
 /**
  * PipelineView Component
@@ -33,7 +33,7 @@ const PipelineView = ({
         lead.businessName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         lead.category?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         lead.notes?.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchesStatus = statusFilter === 'all' || lead.status === statusFilter;
+      const matchesStatus = statusFilter === 'all' || normalizeLeadStatus(lead.status) === statusFilter;
       const matchesScore = scoreFilter === 'all' || lead.leadScore === scoreFilter;
       return matchesSearch && matchesStatus && matchesScore;
     });
@@ -42,7 +42,7 @@ const PipelineView = ({
   const stats = useMemo(() => {
     return LEAD_STATUSES.map(status => ({
       ...status,
-      count: leads.filter(l => l.status === status.value).length
+      count: leads.filter(l => normalizeLeadStatus(l.status) === status.value).length
     }));
   }, [leads]);
 
@@ -73,7 +73,7 @@ const PipelineView = ({
       </div>
 
       {/* Analytics Hub */}
-      <div className="max-w-7xl mx-auto grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 sm:gap-6 mb-10 sm:mb-12">
+      <div className="max-w-7xl mx-auto grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 gap-4 sm:gap-6 mb-10 sm:mb-12">
         {stats.map(status => (
           <button
             key={status.value}
