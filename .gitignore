@@ -29,7 +29,11 @@ dist-ssr
 # Firebase
 .firebase/
 .firebaserc
+
 firebase*
+
+firebase-debug.log*
+.runtimeconfig.json
 
 
 **/sample-images/
