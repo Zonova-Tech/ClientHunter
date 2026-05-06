@@ -83,10 +83,21 @@ VITE_FIREBASE_APP_ID=your_app_id
 ### 4. Run the App
 
 ```bash
+npm run download:samples
 npm run dev
 ```
 
 Visit `http://localhost:5173`
+
+### Sample Images (WhatsApp Clipboard)
+
+The app can copy a category-specific sample image to your clipboard (so you can paste it into WhatsApp), but Google Drive blocks browser CORS for direct image downloads. Use:
+
+```bash
+npm run download:samples
+```
+
+This downloads the shared Drive images into `public/sample-images/samples/` so they are served from the app’s origin and can be copied as image bytes.
 
 ## 📁 Project Structure
 
