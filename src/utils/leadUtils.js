@@ -271,7 +271,22 @@ export const getStatusColor = (status) => {
 
 export const handleWhatsAppCommunication = async (phone, businessName, category) => {
   // 1. Prepare message and URL
-  const message = `Hi! I'm from Zonova Tech (Pvt) Ltd. I noticed ${businessName} doesn't have a website yet. We build websites for businesses and would love to help you get online. Would you be interested in a quick chat?`;
+  const safeBusinessName = (businessName && String(businessName).trim()) || 'your business';
+
+  const message = `Hi! 😊 මම Zonova Tech (Pvt) Ltd එකෙන්.
+
+ඔයාගේ ${safeBusinessName} එකට great ratings & reviews තියෙනවා කියලා දැක්කා 👏
+ඒත් තාම website එකක් නැති එක missed opportunity එකක් වෙලා තියෙනවා.
+
+අපි help කරනවා businesses වලට
+👉 professional website එකක් build කරන්න
+👉 customers ලාට online search කරලා easily find වෙන්න
+👉 orders / inquiries increase කරන්න
+
+ඔයාගේ business එකට simple & affordable website solution එකක් recommend කරන්න පුළුවන් 👍
+
+Quick chat එකක් දාගමුද?
+ඔයාට convenient වෙලාවක් කියන්න 😊`;
 
   // Assuming getWhatsAppUrl is available in this scope
   const whatsappUrl = getWhatsAppUrl(phone, message);
