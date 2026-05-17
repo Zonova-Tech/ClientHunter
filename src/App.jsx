@@ -21,6 +21,8 @@ function App() {
     updateLeadStatus,
     updateLeadNotes,
     updateLeadContact,
+    markLeadContacted,
+    markLeadContactedByPlaceId,
     deleteLead
   } = useLeads();
 
@@ -42,7 +44,7 @@ function App() {
   }, [leads]);
 
   return (
-    <div className="flex flex-col md:flex-row min-h-screen bg-slate-900">
+    <div className="flex flex-col md:flex-row min-h-screen">
       {/* Sidebar */}
       <Sidebar
         activeView={activeView}
@@ -56,6 +58,7 @@ function App() {
           <SearchView
             onAddToPipeline={addLead}
             savedLeadIds={savedLeadIds}
+            onWhatsAppSent={markLeadContactedByPlaceId}
           />
         ) : (
           <PipelineView
@@ -65,6 +68,7 @@ function App() {
             onUpdateStatus={updateLeadStatus}
             onUpdateNotes={updateLeadNotes}
             onUpdateContact={updateLeadContact}
+            onMarkContacted={markLeadContacted}
             onDelete={deleteLead}
           />
         )}

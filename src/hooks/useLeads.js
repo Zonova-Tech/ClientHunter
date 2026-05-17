@@ -164,6 +164,43 @@ const useLeads = () => {
   }, []);
 
   /**
+   * Marks a lead as Contacted and records lastContactedAt.
+   * Idempotent — safe to call multiple times.
+   */
+  const markLeadContacted = useCallback(async (leadId) => {
+    if (!leadId) return { success: false, message: 'No lead id' };
+    try {
+      const leadRef = doc(db, 'leads', leadId);
+      await updateDoc(leadRef, {
+        status: 'Contacted',
+        lastContactedAt: serverTimestamp(),
+      });
+
+      const now = new Date();
+      setLeads(prev => prev.map(lead =>
+        lead.id === leadId
+          ? { ...lead, status: 'Contacted', lastContactedAt: now }
+          : lead
+      ));
+      return { success: true };
+    } catch (err) {
+      console.error('Error marking lead contacted:', err);
+      return { success: false, message: 'Failed to update lead' };
+    }
+  }, []);
+
+  /**
+   * Marks a lead as Contacted by its Google Place ID. No-op if the lead
+   * is not in the pipeline yet.
+   */
+  const markLeadContactedByPlaceId = useCallback(async (placeId) => {
+    if (!placeId) return { success: false, message: 'No placeId' };
+    const lead = leads.find(l => l.placeId === placeId);
+    if (!lead) return { success: false, message: 'Lead not in pipeline' };
+    return markLeadContacted(lead.id);
+  }, [leads, markLeadContacted]);
+
+  /**
    * Delete a lead
    */
   const deleteLead = useCallback(async (leadId) => {
@@ -193,6 +230,8 @@ const useLeads = () => {
     updateLeadStatus,
     updateLeadNotes,
     updateLeadContact,
+    markLeadContacted,
+    markLeadContactedByPlaceId,
     deleteLead,
     refreshLeads: fetchLeads
   };

@@ -29,10 +29,12 @@ ClientHunter helps web agencies in Sri Lanka identify high-potential clients: bu
 
 ### WhatsApp Outreach
 
-- One-click outreach with a pre-filled message template
+- One-click outreach with an editable message template
+- Image attachment: a category-matching promo image is attached automatically
 - Automatic phone formatting: local (077 xxx xxxx) → international (9477xxxxxxx)
-- Backend gateway (HostGrap) with rate limiting and audit logging
+- Firebase Cloud Function gateway (HostGrap) with rate limiting and audit logging
 - Graceful fallback: opens `wa.me` link if the gateway is unavailable
+- Auto-marks the lead as **Contacted** on successful send
 
 ### Pipeline / Mini-CRM
 
@@ -51,10 +53,12 @@ ClientHunter helps web agencies in Sri Lanka identify high-potential clients: bu
 - Lucide React (icons)
 - Firebase SDK 12 (Firestore + App Check)
 
-**Backend**
-- Node.js + Express 4 (TypeScript)
+**Backend (Firebase Cloud Functions, 2nd gen)**
+- Node.js 20 + Express 4 (TypeScript)
+- Region: `asia-south1`
 - Firebase Admin SDK (App Check verification + audit logging)
 - HostGrap API (WhatsApp message delivery)
+- Promo images served as static files from the function
 - Helmet, express-rate-limit, CORS
 
 **Services**
@@ -68,16 +72,19 @@ ClientHunter helps web agencies in Sri Lanka identify high-potential clients: bu
 ## Architecture
 
 ```
-Browser (React + Vite)
+Browser (React + Vite, served from Firebase Hosting)
     │
-    ├── Google Places API ──────── business search
-    ├── Firebase Firestore ─────── lead read / write
-    └── ClientHunter Backend
+    ├── Google Places API ──────────────── business search
+    ├── Firebase Firestore ─────────────── lead read / write
+    └── Firebase Hosting rewrites
               │
-              ├── App Check token verification
-              ├── Rate limiting (30 req / 60 min per IP)
-              ├── HostGrap API ─────── message delivery
-              └── Firestore audit log
+              ├── /api/**          → Cloud Function `api`
+              └── /promo-images/** → Cloud Function `api` (static serve)
+                       │
+                       ├── App Check token verification
+                       ├── Rate limiting (30 req / 60 min per IP)
+                       ├── HostGrap API ─── message delivery
+                       └── Firestore audit log (messageLog collection)
 ```
 
 ---
@@ -93,33 +100,40 @@ ClientHunter/
 │   │   ├── LeadCard.jsx              # Search result card
 │   │   ├── PipelineCard.jsx          # Saved lead card with actions
 │   │   ├── Sidebar.jsx               # Navigation + stats
-│   │   └── WhatsAppSendButton.jsx    # WhatsApp send UI
+│   │   └── WhatsAppSendButton.jsx    # WhatsApp send UI with edit
 │   ├── hooks/
 │   │   ├── useLeads.js               # Firestore CRUD
 │   │   └── usePlacesSearch.js        # Google Places integration & filtering
 │   ├── utils/
-│   │   └── leadUtils.js              # Scoring, phone formatting, WhatsApp helpers
+│   │   ├── leadUtils.js              # Scoring, phone formatting, WhatsApp helpers
+│   │   └── sampleImages.js           # Category → promo image mapping
 │   ├── services/
-│   │   └── whatsappService.js        # Backend API client
+│   │   └── whatsappService.js        # Cloud Function API client
 │   └── config/
 │       └── firebase.js               # Firebase + App Check initialisation
-├── backend/                          # WhatsApp API gateway (Express + TypeScript)
-│   └── src/
-│       ├── index.ts
-│       ├── routes/whatsapp.ts        # POST /api/whatsapp/send-text & send-image
-│       ├── services/
-│       │   ├── hostgrap.ts           # HostGrap API client
-│       │   └── auditLog.ts           # Sends logged to Firestore
-│       ├── middleware/
-│       │   ├── appCheck.ts
-│       │   ├── rateLimit.ts
-│       │   └── cors.ts
-│       └── config/
-│           ├── firebase.ts
-│           └── env.ts
+├── functions/                        # Firebase Cloud Functions (TypeScript)
+│   ├── src/
+│   │   ├── index.ts                  # Exports `api` (onRequest)
+│   │   ├── app.ts                    # Express app builder
+│   │   ├── routes/whatsapp.ts        # /api/whatsapp/send & send-image
+│   │   ├── services/
+│   │   │   ├── hostgrap.ts           # HostGrap API client
+│   │   │   └── auditLog.ts           # Sends logged to Firestore
+│   │   ├── middleware/
+│   │   │   ├── appCheck.ts           # X-Firebase-AppCheck verification
+│   │   │   ├── rateLimit.ts
+│   │   │   ├── cors.ts
+│   │   │   └── errorHandler.ts
+│   │   ├── utils/phone.ts            # Sri Lankan mobile normalization
+│   │   └── config/
+│   │       ├── firebase.ts           # Admin SDK init (auto-credentials)
+│   │       └── env.ts                # Secret/param config
+│   ├── public/promo-images/          # Category promo images (PNG)
+│   └── .env                          # Non-secret params only
+├── firebase.json                     # Hosting + Functions config
+├── .firebaserc                       # Default project: client-hunter-app-a3de6
 └── .github/workflows/
-    ├── dev-cicd.yml                  # Firebase Hosting deploy
-    └── deploy-serverby.yml           # ServerByt FTP deploy
+    └── dev-cicd.yml                  # CI: build + deploy Hosting & Functions
 ```
 
 ---
@@ -127,8 +141,10 @@ ClientHunter/
 ## Prerequisites
 
 - Node.js 20+
+- Firebase CLI (`npm install -g firebase-tools`)
 - Google Cloud project with **Places API** and **Maps JavaScript API** enabled
-- Firebase project with **Firestore** and **App Check** enabled
+- Firebase project on the **Blaze plan** (Functions require outbound HTTP)
+- Firebase **Firestore** and **App Check** enabled
 - HostGrap account (for WhatsApp sends)
 
 ---
@@ -141,6 +157,7 @@ ClientHunter/
 git clone https://github.com/Zonova-Tech/ClientHunter.git
 cd ClientHunter
 npm install
+cd functions && npm install && cd ..
 ```
 
 ### 2. Frontend environment
@@ -168,55 +185,39 @@ VITE_GOOGLE_MAPS_API_KEY=
 # 2. Register it in Firebase Console → App Check → Web app → reCAPTCHA v3
 VITE_RECAPTCHA_V3_SITE_KEY=
 
-# Set to "true" during local development to print a debug token in the browser
-# console, then register that token in Firebase Console → App Check → Manage debug tokens.
-VITE_APP_CHECK_DEBUG_TOKEN=false
+# Set "true" during local dev to print a debug token in the browser console,
+# then register that token in Firebase Console → App Check → Manage debug tokens.
+VITE_APP_CHECK_DEBUG_TOKEN=true
 
-# Backend API URL
-# Dev:  http://localhost:8787
-# Prod: https://api.your-clienthunter-domain.com
-VITE_API_BASE_URL=http://localhost:8787
+# Cloud Function URL
+# Dev:  https://asia-south1-<project-id>.cloudfunctions.net/api
+# Prod: leave empty — Firebase Hosting rewrites /api/** to the function
+VITE_API_BASE_URL=https://asia-south1-client-hunter-app-a3de6.cloudfunctions.net/api
 ```
 
-> **Demo mode**: Leave `VITE_GOOGLE_MAPS_API_KEY` empty to run the app with mock data (5 sample businesses) and explore the UI without any API keys.
+`.env.production` (auto-applied during `vite build`) overrides this so production uses same-origin URLs and disables the debug token.
 
-### 3. Backend environment
+### 3. Cloud Function secrets
+
+Secrets are stored in **Google Secret Manager** and injected at runtime. Set each one with `firebase functions:secrets:set` (use `printf`, **not** `echo`, to avoid trailing newlines):
 
 ```bash
-cd backend
-cp .env.example .env
+printf "your-hostgrap-email@example.com" > /tmp/v && firebase functions:secrets:set HOSTGRAP_EMAIL --data-file /tmp/v && rm /tmp/v
+printf "your-hostgrap-api-key"            > /tmp/v && firebase functions:secrets:set HOSTGRAP_API_KEY --data-file /tmp/v && rm /tmp/v
+printf "94751234567"                      > /tmp/v && firebase functions:secrets:set HOSTGRAP_ADMIN_PHONE --data-file /tmp/v && rm /tmp/v
 ```
 
-Edit `backend/.env`:
+Non-secret runtime params live in `functions/.env`:
 
 ```env
-# HostGrap WhatsApp API
-HOSTGRAP_EMAIL=
-HOSTGRAP_API_KEY=
-HOSTGRAP_ADMIN_PHONE=           # International format, e.g. 94751234567
-
-# Firebase Admin SDK
-# Download a service account key from Firebase Console → Project Settings → Service Accounts
-FIREBASE_SERVICE_ACCOUNT_PATH=./firebase-service-account.json
-
-# CORS — comma-separated allowed origins
-ALLOWED_ORIGINS=http://localhost:5173,https://your-clienthunter-domain.com
-
-# Rate limiting
+ALLOWED_ORIGINS=https://client-hunter-app-a3de6.web.app,https://client-hunter-app-a3de6.firebaseapp.com,http://localhost:5173
+REQUIRE_APP_CHECK=true
+TEST_PHONE_OVERRIDE=        # set to your number to redirect all sends during testing
 RATE_LIMIT_WINDOW_MINUTES=60
 RATE_LIMIT_MAX_REQUESTS=30
-
-# Server
-PORT=8787
-NODE_ENV=development
-
-# App Check enforcement (set to false only for local debugging without App Check)
-REQUIRE_APP_CHECK=true
 ```
 
-Place your Firebase service account JSON at `backend/firebase-service-account.json`.
-
-### 4. Run
+### 4. Run locally
 
 **Frontend** — http://localhost:5173:
 
@@ -224,12 +225,7 @@ Place your Firebase service account JSON at `backend/firebase-service-account.js
 npm run dev
 ```
 
-**Backend** — http://localhost:8787:
-
-```bash
-cd backend
-npm run dev
-```
+In dev mode the frontend calls the **deployed** Cloud Function URL (because HostGrap needs a publicly fetchable image URL). To work entirely offline, run the Functions emulator and point `VITE_API_BASE_URL` at `http://localhost:5001/<project-id>/asia-south1/api`.
 
 ---
 
@@ -239,39 +235,41 @@ npm run dev
 
 ```js
 {
-  placeId: "ChIJ...",               // Google Place ID (unique key)
+  placeId: "ChIJ...",
   businessName: "Silva's Cafe",
   category: "Restaurant",
   ratingCount: 156,
   rating: 4.5,
-  leadScore: "Hot",                 // "Hot" | "Warm" | "Cold"
-  phone: "077 123 4567",            // Display format
-  formattedWhatsapp: "94771234567", // International format (for wa.me links)
+  leadScore: "Hot",
+  phone: "077 123 4567",
+  formattedWhatsapp: "94771234567",
   address: "123 Galle Road, Colombo",
-  email: "",                        // Manually added after saving
-  webUrl: "",                       // Manually added after closing
-  images: ["https://..."],          // Google Places photo URLs
-  status: "New",                    // "New" | "Contacted" | "Lead"
+  email: "",
+  webUrl: "",
+  images: ["https://..."],
+  status: "New",                // "New" | "Contacted" | "Lead"
   notes: "Owner: Mr. Silva",
   createdAt: Timestamp,
-  lastContactedAt: Timestamp        // Auto-set when status changes to Contacted
+  lastContactedAt: Timestamp    // Auto-set on successful WhatsApp send
 }
 ```
 
-### Security Rules (production)
+### Collection: `messageLog`
+
+Each WhatsApp send (success or failure) writes one document:
 
 ```js
-rules_version = '2';
-service cloud.firestore {
-  match /databases/{database}/documents {
-    match /leads/{leadId} {
-      allow read, write: if request.auth != null;
-    }
-    match /auditLogs/{logId} {
-      allow read: if request.auth != null;
-      allow write: if false;        // backend-only writes via Admin SDK
-    }
-  }
+{
+  type: "text" | "image",
+  status: "success" | "failed",
+  phone: "94771234567",
+  message: "...",
+  imageUrl: "https://...",      // image sends only
+  errorMessage: "...",          // failures only
+  source: "clienthunter",
+  ip: "1.2.3.4",
+  userAgent: "Mozilla/5.0...",
+  createdAt: Timestamp
 }
 ```
 
@@ -279,32 +277,42 @@ service cloud.firestore {
 
 ## Deployment
 
-Both CI/CD workflows trigger on push to `dev` and build the frontend with all `VITE_*` secrets injected at build time.
+CI/CD: `.github/workflows/dev-cicd.yml` triggers on push to `dev` and deploys both Hosting and Functions.
 
-### Firebase Hosting
-
-Workflow: `.github/workflows/dev-cicd.yml`
-
-Required GitHub secrets:
+### Required GitHub secrets
 
 | Secret | Description |
 |---|---|
 | `FIREBASE_TOKEN` | Generate with `firebase login:ci` |
-| `FIREBASE_PROJECT_ID` | Firebase project ID |
-| `VITE_FIREBASE_API_KEY` | And all other `VITE_*` variables |
+| `FIREBASE_PROJECT_ID` | `client-hunter-app-a3de6` |
+| `VITE_FIREBASE_API_KEY` | Web SDK config |
+| `VITE_FIREBASE_AUTH_DOMAIN` | Web SDK config |
+| `VITE_FIREBASE_PROJECT_ID` | Web SDK config |
+| `VITE_FIREBASE_STORAGE_BUCKET` | Web SDK config |
+| `VITE_FIREBASE_MESSAGING_SENDER_ID` | Web SDK config |
+| `VITE_FIREBASE_APP_ID` | Web SDK config |
+| `VITE_GOOGLE_MAPS_API_KEY` | Places & Maps JS API |
+| `VITE_RECAPTCHA_V3_SITE_KEY` | App Check site key |
 
-### ServerByt (FTP)
+Cloud Function secrets (`HOSTGRAP_EMAIL`, `HOSTGRAP_API_KEY`, `HOSTGRAP_ADMIN_PHONE`) live in **Google Secret Manager**, not in GitHub.
 
-Workflow: `.github/workflows/deploy-serverby.yml`
+### Manual deploy
 
-Required GitHub secrets:
+```bash
+# Build the frontend
+npm run build
 
-| Secret | Description |
-|---|---|
-| `SERVERBY_HOST` | FTP hostname |
-| `SERVERBY_USER` | FTP username |
-| `SERVERBY_PASSWORD` | FTP password |
-| `SERVERBY_PATH` | Remote deploy path |
+# Deploy everything
+firebase deploy
+
+# Or just one side
+firebase deploy --only hosting
+firebase deploy --only functions
+```
+
+After deploy:
+- Frontend: https://client-hunter-app-a3de6.web.app
+- Function:  https://asia-south1-client-hunter-app-a3de6.cloudfunctions.net/api
 
 ---
 
@@ -324,37 +332,37 @@ export const calculateLeadScore = (ratingCount, rating) => {
 
 ### WhatsApp message template
 
-Edit the message string in [`src/components/LeadCard.jsx`](src/components/LeadCard.jsx):
+Edit `buildOutreachMessage` in [`src/utils/leadUtils.js`](src/utils/leadUtils.js). Users can also edit each message inline in the confirmation modal before sending.
 
-```js
-const message = `Your custom outreach message for ${place.displayName.text}`;
-```
+### Promo images
+
+Drop additional `.png` files into `functions/public/promo-images/`. Mapping from Google Places category to filename is in [`src/utils/sampleImages.js`](src/utils/sampleImages.js) (`CATEGORY_ALIASES` + auto plural/singular matching).
 
 ### Places API fields
 
-Edit the `fieldMask` in [`src/hooks/usePlacesSearch.js`](src/hooks/usePlacesSearch.js) to add or remove fields. Each field group has a different per-request cost — see the [Places API billing docs](https://developers.google.com/maps/documentation/places/web-service/usage-and-billing) before adding fields from higher tiers.
+Edit the `fieldMask` in [`src/hooks/usePlacesSearch.js`](src/hooks/usePlacesSearch.js). Each field group has a different per-request cost — see the [Places API billing docs](https://developers.google.com/maps/documentation/places/web-service/usage-and-billing).
 
 ---
 
 ## Available Scripts
 
-**Frontend** (root):
+**Root (frontend):**
 
 | Script | Description |
 |---|---|
-| `npm run dev` | Start Vite dev server (http://localhost:5173) |
+| `npm run dev` | Vite dev server (http://localhost:5173) |
 | `npm run build` | Production build to `dist/` |
 | `npm run preview` | Serve the production build locally |
 | `npm run lint` | Run ESLint |
 
-**Backend** (`backend/`):
+**`functions/`:**
 
 | Script | Description |
 |---|---|
-| `npm run dev` | Start with `tsx --watch` (auto-reload) |
-| `npm run build` | Compile TypeScript to `dist/` |
-| `npm start` | Run compiled production build |
-| `npm run typecheck` | Type-check without emitting |
+| `npm run build` | Compile TypeScript to `lib/` |
+| `npm run serve` | Build + start Functions emulator |
+| `npm run deploy` | `firebase deploy --only functions` |
+| `npm run logs` | Tail deployed function logs |
 
 ---
 

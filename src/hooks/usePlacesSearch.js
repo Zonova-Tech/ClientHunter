@@ -1,59 +1,62 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { filterSuitableLeads } from '../utils/leadUtils';
 
-/**
- * Custom hook for Google Places API search
- * Now supports Dynamic Script Loading for better security and error handling
- */
 const usePlacesSearch = () => {
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [rawResultsCount, setRawResultsCount] = useState(0);
   const [isScriptLoaded, setIsScriptLoaded] = useState(false);
+  const pendingRejectRef = useRef(null);
 
-  // Dynamic script loader for Google Maps
   useEffect(() => {
     const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
-    
+
     if (!apiKey || apiKey === 'your_google_maps_key_here') {
       console.warn("⚠️ No Google Maps API Key found in .env");
       return;
     }
 
-    // Check if script already exists
+    // Fires when the key is blocked, invalid, or missing API permissions.
+    // Rejects any in-progress search immediately instead of waiting for the timeout.
+    window.gm_authFailure = () => {
+      console.error("❌ Google Maps API authentication failure");
+      if (pendingRejectRef.current) {
+        pendingRejectRef.current(new Error('AUTH_FAILURE'));
+        pendingRejectRef.current = null;
+      }
+    };
+
     if (window.google?.maps?.places) {
       setIsScriptLoaded(true);
       return;
     }
 
+    // Prevent double-loading in React StrictMode: reuse an existing script tag.
+    const existingScript = document.querySelector('script[src*="maps.googleapis.com/maps/api/js"]');
+    if (existingScript) {
+      existingScript.addEventListener('load', () => setIsScriptLoaded(true));
+      return;
+    }
+
     const script = document.createElement('script');
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places`;
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&loading=async&libraries=places`;
     script.async = true;
     script.defer = true;
-    
+
     script.onload = () => {
       console.log("✅ Google Maps Script Loaded");
       setIsScriptLoaded(true);
     };
-    
+
     script.onerror = () => {
       console.error("❌ Failed to load Google Maps script");
       setError("Failed to load Google Maps. Please check your internet connection.");
     };
 
     document.head.appendChild(script);
-
-    return () => {
-      // We usually don't remove the script to avoid issues with other components,
-      // but we could if needed.
-    };
   }, []);
 
-  /**
-   * Search for places
-   * Now includes a MOCK DATA FALLBACK for demo purposes
-   */
   const searchPlaces = useCallback(async (query) => {
     if (!query.trim()) {
       setError('Please enter a search query');
@@ -71,8 +74,7 @@ const usePlacesSearch = () => {
     // --- MOCK DATA FALLBACK ---
     if (isMockMode) {
       console.log("🛠️ Entering Demo Mode (No API Key detected)");
-      
-      // Simulate network delay
+
       await new Promise(resolve => setTimeout(resolve, 1500));
 
       const mockData = [
@@ -84,7 +86,7 @@ const usePlacesSearch = () => {
           userRatingCount: 1240,
           nationalPhoneNumber: '077 123 4567',
           internationalPhoneNumber: '+94 77 123 4567',
-          websiteUri: null, // Target lead (no website)
+          websiteUri: null,
           businessStatus: 'OPERATIONAL',
           leadScore: 'Hot',
           types: ['restaurant', 'food'],
@@ -168,14 +170,12 @@ const usePlacesSearch = () => {
             ...(place.types || [])
           ].filter(Boolean).join(' ').toLowerCase();
 
-          // Try strict ALL matching first
           return queryWords.every(word => {
             const singularWord = word.endsWith('s') ? word.slice(0, -1) : word;
             return searchText.includes(word) || searchText.includes(singularWord);
           });
         });
 
-        // Fallback to ANY matching if strictly nothing matches
         if (filteredMockData.length === 0) {
           filteredMockData = mockData.filter(place => {
             const searchText = [
@@ -200,30 +200,37 @@ const usePlacesSearch = () => {
       return;
     }
 
-    // --- LIVE GOOGLE MAPS EXECUTION ---
+    // --- LIVE GOOGLE MAPS EXECUTION (legacy Places API) ---
     try {
-      if (!window.google || !window.google.maps || !window.google.maps.places) {
+      if (!window.google?.maps?.places) {
         throw new Error('Google Maps API not yet initialized. Please wait a moment.');
       }
 
       console.log("📡 Initializing Places Service...");
       const service = new window.google.maps.places.PlacesService(document.createElement('div'));
-      
+
       const searchRequest = {
         query: query,
-        location: new window.google.maps.LatLng(7.8731, 80.7718), // Focus on Sri Lanka
-        radius: 50000 // 50km
+        location: new window.google.maps.LatLng(7.8731, 80.7718),
+        radius: 50000
       };
 
       console.log("🛰️ Executing textSearch...");
       const allResults = await new Promise((resolve, reject) => {
-        const timeout = setTimeout(() => reject(new Error('TIMEOUT')), 15000);
+        pendingRejectRef.current = reject;
+        const timeout = setTimeout(() => {
+          pendingRejectRef.current = null;
+          reject(new Error('TIMEOUT'));
+        }, 15000);
 
         service.textSearch(searchRequest, (results, status) => {
           clearTimeout(timeout);
+          pendingRejectRef.current = null;
           console.log("🌐 Places API Status:", status);
-          if (status === window.google.maps.places.PlacesServiceStatus.OK || 
-              status === window.google.maps.places.PlacesServiceStatus.ZERO_RESULTS) {
+          if (
+            status === window.google.maps.places.PlacesServiceStatus.OK ||
+            status === window.google.maps.places.PlacesServiceStatus.ZERO_RESULTS
+          ) {
             resolve(results || []);
           } else {
             reject(new Error(status));
@@ -239,7 +246,6 @@ const usePlacesSearch = () => {
         return;
       }
 
-      // Fetch full details
       console.log("🕵️ Fetching details for top results...");
       const detailedResults = await Promise.all(
         allResults.slice(0, 20).map(place => getPlaceDetails(service, place.place_id))
@@ -248,24 +254,26 @@ const usePlacesSearch = () => {
       const validResults = detailedResults.filter(place => place !== null);
       console.log(`📊 Processing ${validResults.length} entries...`);
       const filteredLeads = filterSuitableLeads(validResults);
-      
+
       console.log(`🎯 Filtering complete: ${filteredLeads.length} leads qualify`);
       setResults(filteredLeads);
 
       if (filteredLeads.length === 0 && validResults.length > 0) {
-        setError(`Found ${validResults.length} businesses, but none match our criteria (e.g. established businesses with no website)`);
+        setError(`Found ${validResults.length} businesses, but none match our criteria (established businesses with no website)`);
       }
 
     } catch (err) {
       console.error('💥 Search execution error:', err);
       const msg = err.message;
-      
-      if (msg === 'REQUEST_DENIED' || msg.includes('ApiNotActivated')) {
-        setError('Google Maps API Error: Your key is either invalid or the Places API is not enabled in your Google Cloud Console.');
+
+      if (msg === 'AUTH_FAILURE') {
+        setError('Google Maps API key error: Enable "Maps JavaScript API" and "Places API" in Google Cloud Console. If the key has HTTP referrer restrictions, add http://localhost:5173/* to the allowed list.');
+      } else if (msg === 'REQUEST_DENIED' || msg.includes('ApiNotActivated')) {
+        setError('Google Maps API Error: Your key is either invalid or the Places API is not enabled in Google Cloud Console.');
       } else if (msg === 'OVER_QUERY_LIMIT') {
-        setError('Google Search limit reached. Please check your billing or try again later.');
+        setError('Google search limit reached. Please check your billing or try again later.');
       } else if (msg === 'TIMEOUT') {
-        setError('Search timed out. Please check your internet connection.');
+        setError('Search timed out. This is usually caused by a blocked or misconfigured API key — check the Google Cloud Console.');
       } else {
         setError(`Search failed: ${msg}`);
       }
@@ -274,7 +282,7 @@ const usePlacesSearch = () => {
     }
   }, []);
 
-  const getPlaceDetails = async (service, placeId) => {
+  const getPlaceDetails = (service, placeId) => {
     const fields = [
       'place_id', 'name', 'rating', 'user_ratings_total',
       'formatted_phone_number', 'international_phone_number',
@@ -293,7 +301,7 @@ const usePlacesSearch = () => {
             userRatingCount: place.user_ratings_total,
             nationalPhoneNumber: place.formatted_phone_number,
             internationalPhoneNumber: place.international_phone_number,
-            websiteUri: place.website,
+            websiteUri: place.website ?? null,
             businessStatus: place.business_status,
             photos: place.photos,
             types: place.types,

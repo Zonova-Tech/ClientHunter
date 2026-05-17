@@ -3,7 +3,39 @@
  * Utility functions for phone formatting, lead scoring, and WhatsApp detection
  */
 
-import { getSampleImageUrlForCategory } from './sampleImages';
+import { getSampleImageUrlForCategory, getSampleImageFileForCategory } from './sampleImages';
+import { sendWhatsAppImage, sendWhatsAppText, WhatsAppApiError } from '../services/whatsappService';
+
+/**
+ * Resolves a (possibly relative) sample image path into an absolute URL that
+ * external services like HostGrap can fetch. Returns null if no image is available.
+ *
+ * Important: HostGrap downloads images from the public internet, so localhost
+ * URLs will fail in development. Use a publicly-reachable Drive URL or deploy preview.
+ */
+export const getAbsoluteSampleImageUrl = (category) => {
+  const file = getSampleImageFileForCategory(category);
+  if (!file) return null;
+
+  // In dev: VITE_API_BASE_URL points to emulator/local backend.
+  // In production: empty — Firebase Hosting rewrites /promo-images/** to the function.
+  const apiBase = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '');
+  const origin = apiBase || (typeof window !== 'undefined' ? window.location.origin : '');
+  if (!origin) return null;
+
+  try {
+    return `${origin}/promo-images/${encodeURIComponent(file)}`;
+  } catch {
+    return null;
+  }
+};
+
+/**
+ * Returns the standard outreach message for a business.
+ */
+export const buildOutreachMessage = (businessName) =>
+  `Hi! I'm from Zonova Tech (Pvt) Ltd. I noticed ${businessName} doesn't have a website yet. ` +
+  `We build websites for businesses and would love to help you get online. Would you be interested in a quick chat?`;
 
 /**
  * Validates if a Sri Lankan phone number is a mobile number
@@ -100,33 +132,33 @@ export const getLeadBadgeStyle = (score) => {
     case 'Hot':
       return {
         text: '🔥 HOT LEAD',
-        bgColor: 'bg-gradient-to-r from-amber-500 to-orange-500',
+        bgColor: 'bg-gradient-to-r from-orange-500 via-rose-500 to-pink-500',
         textColor: 'text-white',
-        borderColor: 'border-amber-400',
+        borderColor: 'border-orange-400',
         glow: true
       };
     case 'Warm':
       return {
         text: '⭐ Potential',
-        bgColor: 'bg-blue-600',
+        bgColor: 'bg-gradient-to-r from-violet-600 via-fuchsia-600 to-pink-600',
         textColor: 'text-white',
-        borderColor: 'border-blue-400',
+        borderColor: 'border-fuchsia-400',
         glow: false
       };
     case 'Cold':
       return {
         text: 'New Lead',
-        bgColor: 'bg-slate-600',
-        textColor: 'text-slate-200',
-        borderColor: 'border-slate-500',
+        bgColor: 'bg-gradient-to-r from-cyan-600 to-sky-600',
+        textColor: 'text-white',
+        borderColor: 'border-cyan-400',
         glow: false
       };
     default:
       return {
         text: 'Unknown',
-        bgColor: 'bg-gray-600',
-        textColor: 'text-gray-200',
-        borderColor: 'border-gray-500',
+        bgColor: 'bg-slate-700',
+        textColor: 'text-slate-200',
+        borderColor: 'border-slate-500',
         glow: false
       };
   }
@@ -225,9 +257,9 @@ export const getPrimaryCategory = (types) => {
  * Status options for leads
  */
 export const LEAD_STATUSES = [
-  { value: 'New', label: 'New', color: 'bg-slate-500' },
-  { value: 'Contacted', label: 'Contacted', color: 'bg-purple-500' },
-  { value: 'Lead', label: 'Lead', color: 'bg-blue-500' }
+  { value: 'New', label: 'New', color: 'bg-cyan-400' },
+  { value: 'Contacted', label: 'Contacted', color: 'bg-fuchsia-500' },
+  { value: 'Lead', label: 'Lead', color: 'bg-emerald-400' }
 ];
 
 /**
@@ -269,35 +301,55 @@ export const getStatusColor = (status) => {
 };
 
 
-export const handleWhatsAppCommunication = async (phone, businessName, category) => {
-  // 1. Prepare message and URL
-  const message = `Hi! I'm from Zonova Tech (Pvt) Ltd. I noticed ${businessName} doesn't have a website yet. We build websites for businesses and would love to help you get online. Would you be interested in a quick chat?`;
+/**
+ * Sends a WhatsApp outreach message (image + caption) through the ClientHunter
+ * backend, which proxies to HostGrap.
+ *
+ * Returns: { success, errorCode?, errorMessage?, imageSent }
+ *  - imageSent === false means the image step failed but the text was sent anyway.
+ */
+export const handleWhatsAppCommunication = async (phone, businessName, category, customMessage) => {
+  const message = customMessage?.trim() || buildOutreachMessage(businessName);
+  const imageUrl = getAbsoluteSampleImageUrl(category);
 
-  // Assuming getWhatsAppUrl is available in this scope
-  const whatsappUrl = getWhatsAppUrl(phone, message);
+  const apiError = (err) => ({
+    success: false,
+    errorCode: err instanceof WhatsAppApiError ? err.code : 'unknown',
+    errorMessage: err?.message || 'WhatsApp send failed',
+  });
+
+  // Try image+caption first (single HostGrap call). If no image is available,
+  // or the image send fails, fall back to a plain text message.
+  if (imageUrl) {
+    try {
+      await sendWhatsAppImage(phone, imageUrl, message);
+      return { success: true, imageSent: true };
+    } catch (err) {
+      console.warn('[whatsapp] image send failed, falling back to text:', err);
+      try {
+        await sendWhatsAppText(phone, message);
+        return { success: true, imageSent: false };
+      } catch (textErr) {
+        return { ...apiError(textErr), imageSent: false };
+      }
+    }
+  }
 
   try {
-    // 2. Try to fetch and copy image
-    const sampleImageUrl = getSampleImageUrlForCategory(category);
-    const ClipboardItemCtor = window?.ClipboardItem;
-
-    if (sampleImageUrl && navigator?.clipboard?.write && ClipboardItemCtor) {
-      const response = await fetch(sampleImageUrl);
-      if (!response.ok) throw new Error(`Failed to fetch sample image (${response.status}).`);
-
-      const blob = await response.blob();
-      const mimeType = blob.type || 'image/png';
-
-      await navigator.clipboard.write([
-        new ClipboardItemCtor({ [mimeType]: blob })
-      ]);
-      console.log('Sample image copied to clipboard!');
-    }
+    await sendWhatsAppText(phone, message);
+    return { success: true, imageSent: false };
   } catch (err) {
-    // If copying fails (e.g. wrong format or mobile restriction), log it but don't stop.
-    console.error('Copy failed, proceeding to WhatsApp without image:', err);
-  } finally {
-    // 3. Open WhatsApp
-    window.open(whatsappUrl, '_blank', 'noopener,noreferrer');
+    return { ...apiError(err), imageSent: false };
   }
+};
+
+/**
+ * Opens the lead in wa.me as a manual fallback (no API needed).
+ * Used by the "Open manually" option when the API path fails or the user
+ * wants to compose the message themselves.
+ */
+export const openWhatsAppManually = (phone, businessName) => {
+  const message = buildOutreachMessage(businessName);
+  const url = getWhatsAppUrl(phone, message);
+  window.open(url, '_blank', 'noopener,noreferrer');
 };

@@ -1,27 +1,26 @@
 import React, { useState } from 'react';
-import { 
-  Star, 
-  Phone, 
-  MapPin, 
-  MessageCircle, 
-  Plus, 
+import {
+  Star,
+  Phone,
+  MapPin,
+  Plus,
   Copy,
   Check,
   X,
   Loader2
 } from 'lucide-react';
-import { 
-  getLeadBadgeStyle, 
-  getPrimaryCategory,
-  handleWhatsAppCommunication
+import {
+  getLeadBadgeStyle,
+  getPrimaryCategory
 } from '../utils/leadUtils';
 import { copySampleImageToClipboard } from '../utils/sampleImages';
+import WhatsAppSendButton from './WhatsAppSendButton';
 
 /**
  * LeadCard Component
  * Displays a potential lead with premium glassmorphic styling
  */
-const LeadCard = ({ place, onAddToPipeline, isInPipeline = false }) => {
+const LeadCard = ({ place, onAddToPipeline, isInPipeline = false, onWhatsAppSent }) => {
   const [imageLoaded, setImageLoaded] = useState(false);
   const [imageError, setImageError] = useState(false);
   const [adding, setAdding] = useState(false);
@@ -97,7 +96,7 @@ const LeadCard = ({ place, onAddToPipeline, isInPipeline = false }) => {
   };
 
   return (
-    <div className={`glass-card group overflow-hidden flex flex-col h-full transition-all duration-500 hover:-translate-y-2 hover:shadow-[0_20px_40px_-15px_rgba(59,130,246,0.3)] ${badgeStyle.glow ? 'border-amber-500/30' : 'border-white/5'}`}>
+    <div className={`glass-card group overflow-hidden flex flex-col h-full transition-all duration-500 hover:-translate-y-2 hover:shadow-[0_20px_40px_-15px_rgba(232,121,249,0.35)] ${badgeStyle.glow ? 'border-orange-500/40 hot-lead-glow' : 'border-white/10'}`}>
       {/* Visual Header */}
       <div className="relative h-44 sm:h-56 overflow-hidden">
         {photoUrl && !imageError ? (
@@ -126,7 +125,7 @@ const LeadCard = ({ place, onAddToPipeline, isInPipeline = false }) => {
         </div>
 
         <div className="absolute top-4 right-4 z-10">
-          <div className="px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest bg-slate-950/80 text-blue-400 backdrop-blur-md border border-white/10">
+          <div className="px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest bg-slate-950/80 text-cyan-300 backdrop-blur-md border border-cyan-500/30">
             {category}
           </div>
         </div>
@@ -134,8 +133,8 @@ const LeadCard = ({ place, onAddToPipeline, isInPipeline = false }) => {
 
       {/* Card Body */}
       <div className="p-5 sm:p-6 flex-1 flex flex-col">
-        <div className="flex items-center gap-4 mb-4 pb-4 border-b border-white/5 flex-nowrap">
-          <h3 className="text-2xl font-black text-white truncate group-hover:text-blue-400 transition-colors tracking-tighter min-w-0 flex-1">
+        <div className="flex items-center gap-4 mb-4 pb-4 border-b border-white/10 flex-nowrap">
+          <h3 className="text-2xl font-black text-white truncate group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-r group-hover:from-fuchsia-300 group-hover:to-pink-300 transition-all tracking-tighter min-w-0 flex-1">
             {place.displayName}
           </h3>
 
@@ -144,31 +143,29 @@ const LeadCard = ({ place, onAddToPipeline, isInPipeline = false }) => {
             onClick={openInMaps}
             aria-label="Open location in Google Maps"
             title="Open in Google Maps"
-            className="w-10 h-10 shrink-0 rounded-xl bg-blue-500/5 flex items-center justify-center border border-white/5 hover:border-blue-500/30 transition-all"
+            className="w-10 h-10 shrink-0 rounded-xl bg-cyan-500/10 flex items-center justify-center border border-cyan-500/20 hover:border-cyan-400/50 hover:bg-cyan-500/20 transition-all"
           >
-            <MapPin className="w-4 h-4 text-blue-400" />
+            <MapPin className="w-4 h-4 text-cyan-300" />
           </button>
 
           <div className="flex items-center gap-2 shrink-0">
-            <Star className="w-4 h-4 text-amber-500 fill-amber-500" />
+            <Star className="w-4 h-4 text-amber-400 fill-amber-400" />
             <span className="text-white font-black text-lg">{place.rating?.toFixed(1) || 'N/A'}</span>
           </div>
 
-          <div className="text-slate-500 text-xs font-black tracking-widest shrink-0">
+          <div className="text-slate-400 text-xs font-black tracking-widest shrink-0">
             {place.userRatingCount?.toLocaleString() || 0}
           </div>
         </div>
 
         {/* Action Layer */}
         <div className="mt-auto grid grid-cols-4 gap-3">
-          <button
-            onClick={() => handleWhatsAppCommunication(place.nationalPhoneNumber, place.displayName, category)}
-            aria-label="Initiate contact"
-            title="Initiate contact"
-            className="h-14 w-full bg-emerald-600 hover:bg-emerald-500 text-white rounded-2xl transition-all border-2 border-emerald-500/30 active:scale-95 flex items-center justify-center"
-          >
-            <MessageCircle className="w-5 h-5" />
-          </button>
+          <WhatsAppSendButton
+            phone={place.nationalPhoneNumber}
+            businessName={place.displayName}
+            category={category}
+            onSent={() => onWhatsAppSent?.(place.placeId || place.id)}
+          />
 
           <button
             type="button"
@@ -178,8 +175,8 @@ const LeadCard = ({ place, onAddToPipeline, isInPipeline = false }) => {
             title={getPhoneForTel() ? 'Call' : 'No phone number'}
             className={`h-14 w-full rounded-2xl transition-all border-2 active:scale-95 flex items-center justify-center ${
               getPhoneForTel()
-                ? 'bg-slate-900 hover:bg-slate-800 text-green-400 border-green-500/20'
-                : 'bg-slate-900 text-slate-600 border-slate-700 opacity-60 cursor-not-allowed'
+                ? 'bg-slate-900/70 hover:bg-emerald-600/20 text-emerald-300 border-emerald-500/30 hover:border-emerald-400/60'
+                : 'bg-slate-900/70 text-slate-600 border-slate-700 opacity-60 cursor-not-allowed'
             }`}
           >
             <Phone className="w-5 h-5" />
@@ -192,8 +189,8 @@ const LeadCard = ({ place, onAddToPipeline, isInPipeline = false }) => {
             title={adding ? 'Processing...' : (addResult?.success || isInPipeline ? 'In pipeline' : 'Add to pipeline')}
             className={`h-14 w-full rounded-2xl transition-all border-2 flex items-center justify-center ${
               addResult?.success || isInPipeline
-                ? 'bg-blue-600/10 text-blue-400 border-blue-500/30'
-                : 'bg-slate-900 hover:bg-slate-800 text-white border-slate-700 active:scale-95'
+                ? 'bg-gradient-to-br from-fuchsia-600/20 to-violet-600/20 text-fuchsia-300 border-fuchsia-500/40'
+                : 'bg-gradient-to-br from-violet-600 via-fuchsia-600 to-pink-600 hover:from-violet-500 hover:via-fuchsia-500 hover:to-pink-500 text-white border-fuchsia-500/40 shadow-lg shadow-fuchsia-500/20 active:scale-95'
             }`}
           >
             {adding
@@ -208,7 +205,7 @@ const LeadCard = ({ place, onAddToPipeline, isInPipeline = false }) => {
             disabled={copyingSample}
             aria-label={copySampleResult?.message || 'Copy sample image'}
             title={copySampleResult?.message || 'Copy sample image'}
-            className="h-14 w-full bg-slate-900 hover:bg-slate-800 text-slate-400 border-2 border-slate-700 rounded-2xl transition-all active:scale-95 flex items-center justify-center"
+            className="h-14 w-full bg-slate-900/70 hover:bg-cyan-600/20 text-cyan-300 border-2 border-cyan-500/30 hover:border-cyan-400/60 rounded-2xl transition-all active:scale-95 flex items-center justify-center"
           >
             {copyingSample
               ? <Loader2 className="w-5 h-5 animate-spin" />
