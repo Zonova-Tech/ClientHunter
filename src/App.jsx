@@ -10,7 +10,6 @@ import { normalizeLeadStatus } from './utils/leadUtils';
  * Client Hunter - Lead Generation & CRM Tool
  */
 function App() {
-  console.log("🚀 UI Updates Loaded: Padding and Font Sizes applied.");
   const [activeView, setActiveView] = useState('search');
   
   const {

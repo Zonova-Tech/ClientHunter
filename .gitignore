@@ -37,3 +37,6 @@ firebase-debug.log*
 firebase-debug.*.log
 .runtimeconfig.json
 firebase-service-account.json
+
+# Local design mockups / prototypes
+mockups/
