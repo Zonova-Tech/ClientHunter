@@ -73,6 +73,16 @@ jobs:
         run: npm run build
         working-directory: functions
 
+      - name: Generate Functions .env (non-secret params)
+        run: |
+          cat > functions/.env <<EOF
+          ALLOWED_ORIGINS=https://client-hunter-app-a3de6.web.app,https://client-hunter-app-a3de6.firebaseapp.com,http://localhost:5173
+          REQUIRE_APP_CHECK=true
+          TEST_PHONE_OVERRIDE=${{ secrets.TEST_PHONE_OVERRIDE }}
+          RATE_LIMIT_WINDOW_MINUTES=60
+          RATE_LIMIT_MAX_REQUESTS=30
+          EOF
+
       - name: Deploy to Firebase (Hosting + Functions)
         env:
           FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
