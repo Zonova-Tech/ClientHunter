@@ -1,6 +1,23 @@
 node_modules/
 lib/
 *.log
+
+# Env files — never commit
 .env
-.env.local
+.env.*
+!.env.example
+
+# Firebase runtime + credentials
 .runtimeconfig.json
+firebase-service-account*.json
+*-service-account*.json
+*-credentials*.json
+
+# Cryptographic material
+*.pem
+*.key
+*.p12
+
+# Secrets directories
+secrets/
+.secrets/

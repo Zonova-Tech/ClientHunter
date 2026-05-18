@@ -26,17 +26,33 @@ functions/lib/
 *.sln
 *.sw?
 
-# Env files (any directory)
+# Env files (any directory) — comprehensive, never commit secrets
 .env
-.env.local
-.env.*.local
+.env.*
+!.env.example
+!.env.production
 
 # Firebase runtime / debug artifacts
 .firebase/
 firebase-debug.log*
 firebase-debug.*.log
 .runtimeconfig.json
-firebase-service-account.json
+firebase-service-account*.json
+*-service-account*.json
+*-credentials*.json
+
+# Cryptographic material
+*.pem
+*.key
+*.p12
+*.pfx
+id_rsa
+id_ed25519
+
+# Secrets directories
+secrets/
+private/
+.secrets/
 
 # Local design mockups / prototypes
 mockups/
