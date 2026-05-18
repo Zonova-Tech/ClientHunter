@@ -32,10 +32,34 @@ export const getAbsoluteSampleImageUrl = (category) => {
 
 /**
  * Returns the standard outreach message for a business.
+ * Includes rating + review count when available, to show we actually looked
+ * the business up rather than blasting a generic template.
  */
-export const buildOutreachMessage = (businessName) =>
-  `Hi! I'm from Zonova Tech (Pvt) Ltd. I noticed ${businessName} doesn't have a website yet. ` +
-  `We build websites for businesses and would love to help you get online. Would you be interested in a quick chat?`;
+export const buildOutreachMessage = (businessName, rating, ratingCount) => {
+  const ratingNum = Number(rating);
+  const countNum = Number(ratingCount);
+  const hasStats = Number.isFinite(ratingNum) && Number.isFinite(countNum) && countNum > 0;
+  const statsLine = hasStats
+    ? `ලොකු ratings (${ratingNum.toFixed(1)}★, ${countNum.toLocaleString()} reviews) තියෙනවා`
+    : `great ratings & reviews තියෙනවා`;
+
+  return [
+    `Hi! 😊 මම Zonova Tech (Pvt) Ltd එකෙන්.`,
+    ``,
+    `ඔයාගේ ${businessName} එකට ${statsLine} කියලා දැක්කා 👏`,
+    `ඒත් තාම website එකක් නැති එක missed opportunity එකක් වෙලා තියෙනවා.`,
+    ``,
+    `අපි help කරනවා businesses වලට`,
+    `👉 professional website එකක් build කරන්න`,
+    `👉 customers ලාට online search කරලා easily find වෙන්න`,
+    `👉 orders / inquiries increase කරන්න`,
+    ``,
+    `ඔයාගේ business එකට simple & affordable website solution එකක් recommend කරන්න පුළුවන් 👍`,
+    ``,
+    `Quick chat එකක් දාගමුද?`,
+    `ඔයාට convenient වෙලාවක් කියන්න 😊`,
+  ].join('\n');
+};
 
 /**
  * Validates if a Sri Lankan phone number is a mobile number

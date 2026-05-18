@@ -299,6 +299,8 @@ const PipelineCard = ({
             phone={lead.phone}
             businessName={lead.businessName}
             category={category}
+            rating={lead.rating}
+            ratingCount={lead.ratingCount}
             onSent={() => onMarkContacted?.(lead.id)}
           />
 

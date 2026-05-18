@@ -8,7 +8,15 @@ import {
   formatPhoneForDisplay
 } from '../utils/leadUtils';
 
-const WhatsAppSendButton = ({ phone, businessName, category, onSent, disabled = false }) => {
+const WhatsAppSendButton = ({
+  phone,
+  businessName,
+  category,
+  rating,
+  ratingCount,
+  onSent,
+  disabled = false,
+}) => {
   const [showModal, setShowModal] = useState(false);
   const [sending, setSending] = useState(false);
   const [result, setResult] = useState(null);
@@ -16,7 +24,7 @@ const WhatsAppSendButton = ({ phone, businessName, category, onSent, disabled = 
   const [message, setMessage] = useState('');
   const textareaRef = useRef(null);
 
-  const defaultMessage = buildOutreachMessage(businessName);
+  const defaultMessage = buildOutreachMessage(businessName, rating, ratingCount);
   const phoneDisplay = formatPhoneForDisplay(phone) || 'No phone';
 
   useEffect(() => {

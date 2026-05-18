@@ -164,6 +164,8 @@ const LeadCard = ({ place, onAddToPipeline, isInPipeline = false, onWhatsAppSent
             phone={place.nationalPhoneNumber}
             businessName={place.displayName}
             category={category}
+            rating={place.rating}
+            ratingCount={place.userRatingCount}
             onSent={() => onWhatsAppSent?.(place.placeId || place.id)}
           />
 
