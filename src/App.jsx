@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import Sidebar from './components/Sidebar';
 import SearchView from './components/SearchView';
 import PipelineView from './components/PipelineView';
+import OutreachView from './components/outreach/OutreachView';
 import useLeads from './hooks/useLeads';
 import { normalizeLeadStatus } from './utils/leadUtils';
 
@@ -53,13 +54,14 @@ function App() {
 
       {/* Main Content */}
       <main className="flex-1 flex flex-col min-w-0">
-        {activeView === 'search' ? (
+        {activeView === 'search' && (
           <SearchView
             onAddToPipeline={addLead}
             savedLeadIds={savedLeadIds}
             onWhatsAppSent={markLeadContactedByPlaceId}
           />
-        ) : (
+        )}
+        {activeView === 'pipeline' && (
           <PipelineView
             leads={leads}
             loading={leadsLoading}
@@ -71,6 +73,7 @@ function App() {
             onDelete={deleteLead}
           />
         )}
+        {activeView === 'outreach' && <OutreachView />}
       </main>
     </div>
   );

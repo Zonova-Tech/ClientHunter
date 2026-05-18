@@ -4,6 +4,7 @@ import path from 'path';
 import { corsMiddleware } from './middleware/cors';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler';
 import whatsappRoutes from './routes/whatsapp';
+import outreachRoutes from './routes/outreach';
 
 export function buildApp(): express.Express {
   const app = express();
@@ -23,6 +24,7 @@ export function buildApp(): express.Express {
   });
 
   app.use('/api/whatsapp', whatsappRoutes);
+  app.use('/api/outreach', outreachRoutes);
 
   app.use(notFoundHandler);
   app.use(errorHandler);

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Search, GitBranch, Crosshair, Flame, MessageCircle, Users } from 'lucide-react';
+import { Search, GitBranch, Crosshair, Flame, MessageCircle, Users, Zap } from 'lucide-react';
 
 const Sidebar = ({ activeView, onViewChange, stats }) => {
   const navItems = [
@@ -65,7 +65,7 @@ const Sidebar = ({ activeView, onViewChange, stats }) => {
       </nav>
 
       {/* Stats — desktop only */}
-      <div className="mt-auto mx-4 mb-4 hidden md:block">
+      <div className="mt-auto mx-4 mb-2 hidden md:block">
         <div className="surface-elevated rounded-lg p-4">
           <div
             className="text-[12px] uppercase tracking-wider mb-3 font-medium"
@@ -79,6 +79,30 @@ const Sidebar = ({ activeView, onViewChange, stats }) => {
             <StatRow icon={<Users className="w-4 h-4" style={{ color: 'var(--text-secondary)' }} />} label="Total pool" value={stats?.totalLeads || 0} />
           </div>
         </div>
+      </div>
+
+      {/* Outreach Console — de-emphasized link, separated from daily flow */}
+      <div
+        className="hidden md:block px-4 pb-4 pt-2"
+        style={{ borderTop: '1px solid var(--border)' }}
+      >
+        <button
+          onClick={() => onViewChange('outreach')}
+          className="w-full flex items-center gap-2.5 px-2 py-1.5 rounded-md transition-colors"
+          style={{
+            color: activeView === 'outreach' ? 'var(--primary)' : 'var(--text-muted)',
+            fontWeight: activeView === 'outreach' ? 500 : 400,
+          }}
+          onMouseEnter={(e) => {
+            if (activeView !== 'outreach') e.currentTarget.style.color = 'var(--text-secondary)';
+          }}
+          onMouseLeave={(e) => {
+            if (activeView !== 'outreach') e.currentTarget.style.color = 'var(--text-muted)';
+          }}
+        >
+          <Zap className="w-3.5 h-3.5" />
+          <span className="text-[13px]">Outreach Console</span>
+        </button>
       </div>
     </aside>
   );

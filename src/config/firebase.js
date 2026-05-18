@@ -24,9 +24,16 @@ const recaptchaSiteKey = import.meta.env.VITE_RECAPTCHA_V3_SITE_KEY;
 let appCheckInstance = null;
 
 if (typeof window !== 'undefined') {
-  if (import.meta.env.VITE_APP_CHECK_DEBUG_TOKEN === 'true') {
-    // Print a debug token in the console — register it in the Firebase console under App Check → Apps → Manage debug tokens.
+  const debugToken = import.meta.env.VITE_APP_CHECK_DEBUG_TOKEN;
+  if (debugToken === 'true') {
+    // Auto-generate a fresh token each session and print it in the console —
+    // register the printed token in Firebase Console under App Check → Apps → Manage debug tokens.
+    // Use this mode for one-off testing; tokens change on every reload.
     window.FIREBASE_APPCHECK_DEBUG_TOKEN = true;
+  } else if (debugToken && debugToken.length > 8) {
+    // Stable mode: paste a previously-registered debug token UUID into .env.local.
+    // Same token every session → register it once and forget.
+    window.FIREBASE_APPCHECK_DEBUG_TOKEN = debugToken;
   }
 
   if (recaptchaSiteKey) {

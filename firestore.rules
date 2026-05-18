@@ -1,0 +1,12 @@
+rules_version = '2';
+
+// DIAGNOSTIC MODE — fully permissive to isolate App Check vs rules issue.
+// DO NOT leave deployed in production. Will be re-tightened once diagnosed.
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{document=**} {
+      allow read, write: if true;
+    }
+  }
+}
